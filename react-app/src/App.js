@@ -7,7 +7,7 @@ function App({ keycloak }) {
     const [form, setForm] = useState({ name: '', description: '', price: '', quantity: '' });
     const [editingId, setEditingId] = useState(null);
 
-    const apiBase = "http://127.0.0.1:8085";
+    const apiBase = "http://localhost:8085";
 
     async function fetchProducts() {
         setLoading(true);
