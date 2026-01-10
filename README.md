@@ -12,23 +12,51 @@ Le projet inclut :
 ## 🧰 Prérequis
 - Java 21, Maven
 - Node.js + npm
-- Keycloak (dev) accessible sur `http://127.0.0.1:8080`
-- (Optionnel) Docker si vous préférez lancer Keycloak via conteneur
+- Docker & Docker Compose (recommandé pour lancer Keycloak)
+- Ou Keycloak installé localement
 
 ---
 
-## 🔐 Keycloak — exporter / importer le realm
+## 🐳 Démarrage rapide avec Docker Compose (Recommandé)
+Le projet inclut un fichier `docker-compose.yml` qui démarre automatiquement Keycloak avec PostgreSQL et importe le realm `ecom`.
+
+1. **Démarrer Keycloak avec Docker Compose** :
+```bash
+docker-compose up -d
+```
+
+2. **Vérifier que les services sont démarrés** :
+```bash
+docker-compose ps
+```
+
+3. **Accéder à Keycloak** :
+   - URL : http://localhost:8080
+   - Admin username : `admin`
+   - Admin password : `admin`
+   - Le realm `ecom` est importé automatiquement !
+
+4. **Arrêter les services** :
+```bash
+docker-compose down
+```
+
+5. **Arrêter et supprimer les volumes (données)** :
+```bash
+docker-compose down -v
+```
+
+**Note** : Le fichier `docker-compose.yml` inclut :
+- **PostgreSQL** : Base de données pour Keycloak (persistance)
+- **Keycloak** : Import automatique du realm `ecom` depuis `ecom-realm.json`
+- Health checks pour s'assurer que les services sont prêts
+
+---
+
+## 🔐 Keycloak — exporter / importer le realm (Manuel)
 Pour faciliter la configuration de votre environnement, un export du realm `ecom` est fourni (fichier `ecom-realm.json`).
 
-- Import via l'interface Keycloak (recommandé) : Realm → **Add realm** → **Select file** → Import `ecom-realm.json`.
-
-- Import via Docker (fast start, import automatique) :
-```bash
-docker run --rm -p 8080:8080 \
-  -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin \
-  -v $(pwd)/ecom-realm.json:/tmp/ecom-realm.json \
-  quay.io/keycloak/keycloak:latest start-dev --import-realm
-```
+- Import via l'interface Keycloak (si vous n'utilisez pas Docker Compose) : Realm → **Add realm** → **Select file** → Import `ecom-realm.json`.
 
 - Remarques importantes :
   - **Ne publiez pas** de secrets (client secrets, mots de passe) dans un dépôt public. Si vous placez `ecom-realm.json` dans Git, redactionnez ou stockez le fichier dans un privé.
