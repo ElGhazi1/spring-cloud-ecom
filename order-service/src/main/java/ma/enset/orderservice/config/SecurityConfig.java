@@ -29,6 +29,7 @@ public class SecurityConfig {
         grantedAuthoritiesConverter.setAuthoritiesClaimName("realm_access.roles");
 
         JwtAuthenticationConverter jwtAuthConverter = new JwtAuthenticationConverter();
+        jwtAuthConverter.setPrincipalClaimName("preferred_username");
         jwtAuthConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);
 
         http.oauth2ResourceServer(oauth2 ->

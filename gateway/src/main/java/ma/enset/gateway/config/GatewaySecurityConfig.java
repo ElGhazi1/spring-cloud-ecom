@@ -35,6 +35,7 @@ public class GatewaySecurityConfig {
         grantedAuthoritiesConverter.setAuthoritiesClaimName("realm_access.roles");
 
         JwtAuthenticationConverter jwtAuthConverter = new JwtAuthenticationConverter();
+        jwtAuthConverter.setPrincipalClaimName("preferred_username");
         jwtAuthConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);
 
         ReactiveJwtAuthenticationConverterAdapter reactiveAdapter = new ReactiveJwtAuthenticationConverterAdapter(jwtAuthConverter);
