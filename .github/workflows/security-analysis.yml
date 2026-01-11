@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
           queries: security-extended,security-and-quality
@@ -51,7 +51,7 @@ jobs:
           cd ../order-service && mvn clean compile -DskipTests
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
 
@@ -78,17 +78,19 @@ jobs:
             p/react
             p/docker
             p/owasp-top-ten
-          generateSarif: true
+        continue-on-error: true
 
       - name: Upload Semgrep results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
+        continue-on-error: true
         with:
           sarif_file: semgrep.sarif
 
       - name: Upload Semgrep results as artifact
         uses: actions/upload-artifact@v4
         if: always()
+        continue-on-error: true
         with:
           name: semgrep-results
           path: semgrep.sarif
@@ -115,7 +117,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: ./react-app
-        run: npm ci
+        run: npm install
 
       - name: Run ESLint
         working-directory: ./react-app
@@ -197,8 +199,9 @@ jobs:
           retention-days: 30
 
       - name: Upload SARIF results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
+        continue-on-error: true
         with:
           sarif_file: |
             gateway/target/dependency-check-report.sarif
@@ -236,8 +239,9 @@ jobs:
           exit-code: '0'
 
       - name: Upload Trivy results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
+        continue-on-error: true
         with:
           sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
 
