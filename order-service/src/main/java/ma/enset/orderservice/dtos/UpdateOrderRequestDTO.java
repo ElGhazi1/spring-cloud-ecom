@@ -1,4 +1,11 @@
 package ma.enset.orderservice.dtos;
 
-public record UpdateOrderRequestDTO() {
+import lombok.Builder;
+import ma.enset.orderservice.OrderStatus;
+
+@Builder
+public record UpdateOrderRequestDTO(
+        int quantity,
+        OrderStatus status
+) {
 }

@@ -1,4 +1,11 @@
 package ma.enset.orderservice.dtos;
 
-public record CreateOrderRequestDTO() {
+import lombok.Builder;
+
+@Builder
+public record CreateOrderRequestDTO(
+        String clientId,
+        String productId,
+        int quantity
+) {
 }
