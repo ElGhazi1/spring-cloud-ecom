@@ -23,7 +23,7 @@ public class ProductController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','CLIENT')")
-    public List<Product> products(Authentication auth) {
+    public List<Product> products() {
         return productService.findAll();
     }
 
