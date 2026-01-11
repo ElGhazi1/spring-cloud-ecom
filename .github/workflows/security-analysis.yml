@@ -1,0 +1,338 @@
+name: Security Analysis & Code Quality
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  JAVA_VERSION: '21'
+  NODE_VERSION: '20'
+
+jobs:
+  # CodeQL Analysis (GitHub Native SAST)
+  codeql-analysis:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'java', 'javascript' ]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended,security-and-quality
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        if: matrix.language == 'java'
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build Java Services
+        if: matrix.language == 'java'
+        run: |
+          cd gateway && mvn clean compile -DskipTests
+          cd ../product-service && mvn clean compile -DskipTests
+          cd ../order-service && mvn clean compile -DskipTests
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  # Semgrep SAST Analysis
+  semgrep-analysis:
+    name: Semgrep SAST
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/java
+            p/javascript
+            p/react
+            p/docker
+            p/owasp-top-ten
+          generateSarif: true
+
+      - name: Upload Semgrep results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: semgrep.sarif
+
+      - name: Upload Semgrep results as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: semgrep-results
+          path: semgrep.sarif
+          retention-days: 30
+
+  # ESLint for React Application
+  eslint-analysis:
+    name: ESLint Analysis (React)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ./react-app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./react-app
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: ./react-app
+        run: |
+          npm run lint -- --format json --output-file eslint-report.json || true
+          npm run lint
+
+      - name: Upload ESLint results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eslint-results
+          path: react-app/eslint-report.json
+          retention-days: 30
+
+  # OWASP Dependency Check
+  owasp-dependency-check:
+    name: OWASP Dependency Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Run OWASP Dependency-Check for Gateway
+        working-directory: ./gateway
+        run: |
+          mvn org.owasp:dependency-check-maven:check \
+            -DfailBuildOnCVSS=7 \
+            -DsuppressionFile=../dependency-check-suppressions.xml \
+            -Dformats=HTML,JSON,SARIF
+
+      - name: Run OWASP Dependency-Check for Product Service
+        working-directory: ./product-service
+        run: |
+          mvn org.owasp:dependency-check-maven:check \
+            -DfailBuildOnCVSS=7 \
+            -DsuppressionFile=../dependency-check-suppressions.xml \
+            -Dformats=HTML,JSON,SARIF
+
+      - name: Run OWASP Dependency-Check for Order Service
+        working-directory: ./order-service
+        run: |
+          mvn org.owasp:dependency-check-maven:check \
+            -DfailBuildOnCVSS=7 \
+            -DsuppressionFile=../dependency-check-suppressions.xml \
+            -Dformats=HTML,JSON,SARIF
+
+      - name: Set up Node.js for React App
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install npm-audit-resolver
+        run: npm install -g npm-audit-resolver better-npm-audit
+
+      - name: Run npm audit for React App
+        working-directory: ./react-app
+        run: |
+          npm install
+          npm audit --json > npm-audit-report.json || true
+          npx better-npm-audit audit --level moderate
+
+      - name: Upload OWASP Dependency-Check Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: owasp-dependency-check-reports
+          path: |
+            **/target/dependency-check-report.*
+            react-app/npm-audit-report.json
+          retention-days: 30
+
+      - name: Upload SARIF results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: |
+            gateway/target/dependency-check-report.sarif
+            product-service/target/dependency-check-report.sarif
+            order-service/target/dependency-check-report.sarif
+
+  # Docker Image Security Scanning with Trivy
+  trivy-docker-scan:
+    name: Trivy Docker Image Scan
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        service: [gateway, product-service, order-service, react-app]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image for ${{ matrix.service }}
+        working-directory: ./${{ matrix.service }}
+        run: |
+          docker build -t ${{ matrix.service }}:${{ github.sha }} .
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ matrix.service }}:${{ github.sha }}
+          format: 'sarif'
+          output: 'trivy-results-${{ matrix.service }}.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          exit-code: '0'
+
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
+
+      - name: Run Trivy vulnerability scanner (Table format)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ matrix.service }}:${{ github.sha }}
+          format: 'table'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          exit-code: '0'
+
+      - name: Generate Trivy JSON report
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ matrix.service }}:${{ github.sha }}
+          format: 'json'
+          output: 'trivy-results-${{ matrix.service }}.json'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+      - name: Upload Trivy scan results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-scan-results-${{ matrix.service }}
+          path: trivy-results-${{ matrix.service }}.*
+          retention-days: 30
+
+  # Combined Security Report
+  security-summary:
+    name: Security Summary Report
+    runs-on: ubuntu-latest
+    needs: [codeql-analysis, semgrep-analysis, eslint-analysis, owasp-dependency-check, trivy-docker-scan]
+    if: always()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: security-reports
+
+      - name: Generate Security Summary
+        run: |
+          echo "# Security Analysis Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Workflow Status" >> $GITHUB_STEP_SUMMARY
+          echo "- **CodeQL Analysis**: ${{ needs.codeql-analysis.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Semgrep SAST**: ${{ needs.semgrep-analysis.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **ESLint Analysis**: ${{ needs.eslint-analysis.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **OWASP Dependency Check**: ${{ needs.owasp-dependency-check.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Trivy Docker Scan**: ${{ needs.trivy-docker-scan.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Services Analyzed" >> $GITHUB_STEP_SUMMARY
+          echo "- Gateway Service" >> $GITHUB_STEP_SUMMARY
+          echo "- Product Service" >> $GITHUB_STEP_SUMMARY
+          echo "- Order Service" >> $GITHUB_STEP_SUMMARY
+          echo "- React Application" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Reports Available" >> $GITHUB_STEP_SUMMARY
+          echo "Check the artifacts section for detailed reports." >> $GITHUB_STEP_SUMMARY
+
+      - name: Comment PR with Security Summary
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const summary = `
+            ## 🔒 Security Analysis Complete
+            
+            | Check | Status |
+            |-------|--------|
+            | CodeQL Analysis | ${{ needs.codeql-analysis.result }} |
+            | Semgrep SAST | ${{ needs.semgrep-analysis.result }} |
+            | ESLint Analysis | ${{ needs.eslint-analysis.result }} |
+            | OWASP Dependency Check | ${{ needs.owasp-dependency-check.result }} |
+            | Trivy Docker Scan | ${{ needs.trivy-docker-scan.result }} |
+            
+            **Services Analyzed:**
+            - ✅ Gateway Service
+            - ✅ Product Service
+            - ✅ Order Service
+            - ✅ React Application
+            
+            View detailed results in:
+            - GitHub Security tab for CodeQL, Semgrep, and Trivy findings
+            - Workflow artifacts for detailed reports
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+

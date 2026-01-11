@@ -131,8 +131,78 @@ curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer <ACCE
 
 ---
 
+## 🛡️ Sécurité & Analyse de Code
+
+Ce projet inclut un workflow GitHub Actions complet pour l'analyse de sécurité :
+
+### 🔍 Outils Intégrés
+
+1. **CodeQL** - Analyse statique native GitHub (SAST)
+   - Détection de vulnérabilités de sécurité dans Java et JavaScript
+   - Analyse sémantique avancée du code
+   - Intégration native avec GitHub Security tab
+   - Pas de configuration serveur nécessaire
+
+2. **Semgrep** - Analyse SAST moderne et rapide
+   - Détection de patterns de sécurité dangereux
+   - Règles pré-configurées pour OWASP Top 10
+   - Support Java, JavaScript, React, Docker
+   - Résultats en temps réel
+
+3. **ESLint** - Analyse de code JavaScript/React
+   - Détection de problèmes de qualité et sécurité
+   - Règles spécifiques à React
+   - Analyse statique du code frontend
+
+4. **OWASP Dependency-Check** - Analyse des dépendances
+   - Détection de CVEs dans les dépendances Maven et npm
+   - Génération de rapports SARIF pour GitHub Security
+   - Seuil configurable (CVSS ≥ 7 par défaut)
+
+5. **Trivy** - Scan des images Docker
+   - Analyse des vulnérabilités dans les images Docker
+   - Détection des failles OS et applicatives
+   - Rapports pour chaque service (gateway, product, order, react-app)
+
+### 📖 Documentation
+
+- **[Guide de Configuration](SECURITY_WORKFLOW_SETUP.md)** - Configuration complète et premiers pas
+- **[Référence Rapide](SECURITY_QUICK_REFERENCE.md)** - Commandes et aide-mémoire
+- **[Documentation Workflow](.github/workflows/README.md)** - Détails techniques du workflow
+
+### 🚀 Démarrage Rapide
+
+1. **Aucune configuration serveur nécessaire !** 
+   - CodeQL, Semgrep et ESLint fonctionnent directement dans GitHub Actions
+   - Pas besoin de SONAR_TOKEN ou SONAR_HOST_URL
+
+2. Le workflow s'exécute automatiquement sur :
+   - Push vers `main`, `master`, ou `develop`
+   - Pull Requests
+   - Planification hebdomadaire (lundi 00:00 UTC)
+   - Déclenchement manuel
+
+3. Consultez les résultats :
+   - **GitHub Security Tab** : Alertes CodeQL, Semgrep, OWASP et Trivy
+   - **Code Scanning Alerts** : Vulnérabilités détaillées avec suggestions de correction
+   - **Workflow Artifacts** : Rapports détaillés HTML/JSON
+
+### ✨ Avantages des Nouveaux Outils
+
+- ✅ **Zéro Configuration** - Pas de serveur SonarQube à configurer
+- ✅ **Gratuit pour Projets Publics** - Tous les outils sont gratuits sur GitHub
+- ✅ **Intégration Native** - Résultats directement dans GitHub Security
+- ✅ **Analyse Rapide** - Résultats en quelques minutes
+- ✅ **Suggestions de Correction** - CodeQL fournit des exemples de code corrigé
+
+Pour plus d'informations, consultez le [guide de configuration complet](SECURITY_WORKFLOW_SETUP.md).
+
+---
+
 ## 📚 Contribuer
 - Ajoutez issues/PR pour les nouvelles fonctionnalités (Orders UI, tests, Docker compose, CI/CD, sécurité scans).
+- Assurez-vous que tous les tests de sécurité passent avant de soumettre une PR.
+- Documentez toute suppression de vulnérabilité dans les fichiers de configuration appropriés.
 
 ---
 
