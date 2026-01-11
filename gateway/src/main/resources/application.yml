@@ -18,11 +18,11 @@ spring:
           routes:
 
             - id: product-service
-              uri: ${PRODUCT_SERVICE_IP:http://localhost:8081}
+              uri: ${PRODUCT_SERVICE_URL:http://localhost:8081}
               predicates:
                 - Path=/products/**
 
             - id: order-service
-              uri: ${ORDER_SERVICE_IP:http://localhost:8082}
+              uri: ${ORDER_SERVICE_URL:http://localhost:8082}
               predicates:
                 - Path=/orders/**
