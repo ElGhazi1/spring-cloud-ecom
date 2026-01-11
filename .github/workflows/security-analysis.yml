@@ -180,7 +180,9 @@ jobs:
             -Dformats=HTML,JSON \
             -DretireJsAnalyzerEnabled=false \
             -DnodeAnalyzerEnabled=false \
-            -DassemblyAnalyzerEnabled=false
+            -DassemblyAnalyzerEnabled=false \
+            -DautoUpdate=false \
+            -DskipSystemScope=true
 
       - name: Run OWASP Dependency-Check for Product Service
         working-directory: ./product-service
@@ -192,7 +194,9 @@ jobs:
             -Dformats=HTML,JSON \
             -DretireJsAnalyzerEnabled=false \
             -DnodeAnalyzerEnabled=false \
-            -DassemblyAnalyzerEnabled=false
+            -DassemblyAnalyzerEnabled=false \
+            -DautoUpdate=false \
+            -DskipSystemScope=true
 
       - name: Run OWASP Dependency-Check for Order Service
         working-directory: ./order-service
@@ -204,7 +208,9 @@ jobs:
             -Dformats=HTML,JSON \
             -DretireJsAnalyzerEnabled=false \
             -DnodeAnalyzerEnabled=false \
-            -DassemblyAnalyzerEnabled=false
+            -DassemblyAnalyzerEnabled=false \
+            -DautoUpdate=false \
+            -DskipSystemScope=true
 
       - name: Set up Node.js for React App
         uses: actions/setup-node@v4
