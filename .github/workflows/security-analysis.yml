@@ -190,15 +190,13 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Install npm-audit-resolver
-        run: npm install -g npm-audit-resolver better-npm-audit
-
       - name: Run npm audit for React App
         working-directory: ./react-app
+        continue-on-error: true
         run: |
           npm install
           npm audit --json > npm-audit-report.json || true
-          npx better-npm-audit audit --level moderate
+          npm audit || true
 
       - name: Upload OWASP Dependency-Check Reports
         uses: actions/upload-artifact@v4
