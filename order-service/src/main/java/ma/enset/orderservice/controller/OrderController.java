@@ -23,7 +23,7 @@ public class OrderController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','CLIENT')")
-    public List<Order> list(Authentication auth) {
+    public List<Order> list() {
         return orderService.findAll();
     }
 
