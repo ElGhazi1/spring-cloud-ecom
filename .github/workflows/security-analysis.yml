@@ -179,7 +179,6 @@ jobs:
           mvn org.owasp:dependency-check-maven:check \
             -DnvdApiKey=${NVD_API_KEY} \
             -DfailBuildOnCVSS=7 \
-            -DsuppressionFile=../dependency-check-suppressions.xml \
             -Dformats=HTML,JSON
 
       - name: Run OWASP Dependency-Check for Product Service
@@ -191,7 +190,6 @@ jobs:
           mvn org.owasp:dependency-check-maven:check \
             -DnvdApiKey=${NVD_API_KEY} \
             -DfailBuildOnCVSS=7 \
-            -DsuppressionFile=../dependency-check-suppressions.xml \
             -Dformats=HTML,JSON
 
       - name: Run OWASP Dependency-Check for Order Service
@@ -203,7 +201,6 @@ jobs:
           mvn org.owasp:dependency-check-maven:check \
             -DnvdApiKey=${NVD_API_KEY} \
             -DfailBuildOnCVSS=7 \
-            -DsuppressionFile=../dependency-check-suppressions.xml \
             -Dformats=HTML,JSON
 
       - name: Upload OWASP Dependency-Check Reports
