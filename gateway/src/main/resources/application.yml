@@ -25,4 +25,5 @@ spring:
             - id: order-service
               uri: ${ORDER_SERVICE_URL:http://localhost:8082}
               predicates:
+                - Path=/orders
                 - Path=/orders/**
