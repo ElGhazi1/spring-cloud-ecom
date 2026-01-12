@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from './ui/button';
 import {
@@ -15,6 +15,13 @@ import { Label } from './ui/label';
 
 const ProductFormDialog = ({ form, editingId, onSubmit, onChange, onCancel, trigger }) => {
     const [open, setOpen] = useState(false);
+
+    // Open dialog automatically when editingId is set
+    useEffect(() => {
+        if (editingId) {
+            setOpen(true);
+        }
+    }, [editingId]);
 
     const handleSubmit = (e) => {
         e.preventDefault();

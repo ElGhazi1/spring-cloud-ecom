@@ -9,7 +9,7 @@ import { Button } from './components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { Badge } from './components/ui/badge';
-import { Edit, User, Mail, Shield, Package, ShoppingCart, LogOut } from 'lucide-react';
+import { User, Mail, Shield, Package, ShoppingCart, LogOut } from 'lucide-react';
 
 function App({ keycloak }) {
     const apiBase = process.env.API_BASE_URL || "http://localhost:8085";
@@ -53,6 +53,7 @@ function App({ keycloak }) {
         editingOrderId,
         handleProductSelection,
         handleQuantityChange,
+        handleStatusChange,
         handleCreateOrder,
         editOrder,
         handleDeleteOrder,
@@ -166,14 +167,6 @@ function App({ keycloak }) {
                                         onSubmit={submitForm}
                                         onChange={setForm}
                                         onCancel={cancelEdit}
-                                        trigger={
-                                            editingId ? (
-                                                <Button variant="outline">
-                                                    <Edit className="w-4 h-4 mr-2" />
-                                                    Edit Product
-                                                </Button>
-                                            ) : null
-                                        }
                                     />
                                 )}
                             </div>
@@ -243,7 +236,9 @@ function App({ keycloak }) {
                                         onSubmit={handleCreateOrder}
                                         onProductSelect={handleProductSelection}
                                         onQuantityChange={handleQuantityChange}
+                                        onStatusChange={handleStatusChange}
                                         onCancel={cancelOrderEdit}
+                                        hasRole={hasRole}
                                         trigger={<div style={{ display: 'none' }} />}
                                     />
                                 )}
