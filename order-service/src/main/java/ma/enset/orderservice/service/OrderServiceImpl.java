@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @AllArgsConstructor
@@ -27,6 +26,11 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    public List<OrderResponseDTO> findByClientId(String clientId) {
+        return repository.findByClientId(clientId).stream().map(mapper::toResponseDTO).toList();
+    }
+
+    @Override
     public OrderResponseDTO findById(String id) {
         Order order = repository.findById(id).orElse(null);
 
@@ -38,9 +42,10 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public OrderResponseDTO save(CreateOrderRequestDTO request) {
+    public OrderResponseDTO save(CreateOrderRequestDTO request, String clientId) {
 
         Order order = mapper.toEntity(request);
+        order.setClientId(clientId);
         order.setStatus(OrderStatus.PENDING);
         order.setCreatedAt(LocalDateTime.now());
         order.setUpdatedAt(LocalDateTime.now());
@@ -52,7 +57,8 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public OrderResponseDTO update(String id, UpdateOrderRequestDTO request) {
-        Order order = repository.findById(id).get();
+        Order order = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Order not found with id: " + id));
 
         order.setQuantity(request.quantity());
         order.setStatus(request.status());
