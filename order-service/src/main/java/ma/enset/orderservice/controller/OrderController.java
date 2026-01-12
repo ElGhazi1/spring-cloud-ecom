@@ -1,14 +1,12 @@
 package ma.enset.orderservice.controller;
 
-import ma.enset.orderservice.model.Order;
+import ma.enset.orderservice.dtos.CreateOrderRequestDTO;
+import ma.enset.orderservice.dtos.OrderResponseDTO;
+import ma.enset.orderservice.dtos.UpdateOrderRequestDTO;
 import ma.enset.orderservice.service.OrderService;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.validation.Valid;
-import java.net.URI;
 import java.util.List;
 
 @RestController
@@ -23,36 +21,32 @@ public class OrderController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','CLIENT')")
-    public List<Order> list() {
+    public List<OrderResponseDTO> list() {
         return orderService.findAll();
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','CLIENT')")
-    public ResponseEntity<Order> get(@PathVariable Integer id) {
-        return orderService.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public OrderResponseDTO get(@PathVariable String id) {
+        return orderService.findById(id);
     }
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Order> create(@Valid @RequestBody Order order) {
-        Order saved = orderService.save(order);
-        return ResponseEntity.created(URI.create("/orders/" + saved.getId())).body(saved);
+    public OrderResponseDTO create(@RequestBody CreateOrderRequestDTO request) {
+        return orderService.save(request);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Order> update(@PathVariable Integer id, @RequestBody Order order) {
-        Order updated = orderService.update(id, order);
-        return ResponseEntity.ok(updated);
+    public OrderResponseDTO update(@PathVariable String id, @RequestBody UpdateOrderRequestDTO order) {
+        return orderService.update(id, order);
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+    public void delete(@PathVariable String id) {
         orderService.delete(id);
-        return ResponseEntity.noContent().build();
     }
 }
+

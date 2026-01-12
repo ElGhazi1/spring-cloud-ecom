@@ -37,6 +37,25 @@ services:
       keycloak:
         condition: service_healthy
 
+  order-db:
+    image: postgres:15-alpine
+    container_name: order-db
+    environment:
+      POSTGRES_DB: orderdb
+      POSTGRES_USER: order
+      POSTGRES_PASSWORD: order123
+    ports:
+      - "5432:5432"
+    networks:
+      - ecom-network
+    volumes:
+      - order-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U order -d orderdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   order-service:
     build:
       context: ./order-service
@@ -46,8 +65,13 @@ services:
       - ecom-network
     environment:
       - OAUTH2_RESOURCE_SERVER_JWT_URI=http://keycloak:8080/realms/ecom
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://order-db:5432/orderdb
+      - SPRING_DATASOURCE_USERNAME=order
+      - SPRING_DATASOURCE_PASSWORD=order123
     depends_on:
       keycloak:
+        condition: service_healthy
+      order-db:
         condition: service_healthy
 
   product-service:
@@ -80,3 +104,7 @@ services:
 networks:
   ecom-network:
     driver: bridge
+
+volumes:
+  order-db-data:
+

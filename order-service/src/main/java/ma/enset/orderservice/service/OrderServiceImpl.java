@@ -1,52 +1,70 @@
 package ma.enset.orderservice.service;
 
+import lombok.AllArgsConstructor;
+import ma.enset.orderservice.OrderStatus;
+import ma.enset.orderservice.dtos.CreateOrderRequestDTO;
+import ma.enset.orderservice.dtos.OrderResponseDTO;
+import ma.enset.orderservice.dtos.UpdateOrderRequestDTO;
+import ma.enset.orderservice.mappers.OrderMapper;
 import ma.enset.orderservice.model.Order;
 import ma.enset.orderservice.repository.OrderRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 @Service
+@AllArgsConstructor
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository repository;
+    private final OrderMapper mapper;
 
-    public OrderServiceImpl(OrderRepository repository) {
-        this.repository = repository;
+    @Override
+    public List<OrderResponseDTO> findAll() {
+        return repository.findAll().stream().map(mapper::toResponseDTO).toList();
     }
 
     @Override
-    public List<Order> findAll() {
-        return repository.findAll();
+    public OrderResponseDTO findById(String id) {
+        Order order = repository.findById(id).orElse(null);
+
+        if (order == null) {
+            return null;
+        }
+
+        return mapper.toResponseDTO(order);
     }
 
     @Override
-    public Optional<Order> findById(Integer id) {
-        return repository.findById(id);
+    public OrderResponseDTO save(CreateOrderRequestDTO request) {
+
+        Order order = mapper.toEntity(request);
+        order.setStatus(OrderStatus.PENDING);
+        order.setCreatedAt(LocalDateTime.now());
+        order.setUpdatedAt(LocalDateTime.now());
+
+        order = repository.save(order);
+
+        return mapper.toResponseDTO(order);
     }
 
     @Override
-    public Order save(Order order) {
-        return repository.save(order);
+    public OrderResponseDTO update(String id, UpdateOrderRequestDTO request) {
+        Order order = repository.findById(id).get();
+
+        order.setQuantity(request.quantity());
+        order.setStatus(request.status());
+        order.setUpdatedAt(LocalDateTime.now());
+
+        order = repository.save(order);
+
+        return mapper.toResponseDTO(order);
     }
 
     @Override
-    public Order update(Integer id, Order order) {
-        return repository.findById(id).map(o -> {
-            o.setClient(order.getClient());
-            o.setDate(order.getDate());
-            o.setTotal(order.getTotal());
-            o.setStatus(order.getStatus());
-            return repository.save(o);
-        }).orElseGet(() -> {
-            order.setId(id);
-            return repository.save(order);
-        });
-    }
-
-    @Override
-    public void delete(Integer id) {
+    public void delete(String id) {
         repository.deleteById(id);
     }
 }

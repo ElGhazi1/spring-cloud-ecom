@@ -1,48 +1,32 @@
 package ma.enset.orderservice.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
-import java.time.LocalDate;
+import lombok.*;
+import ma.enset.orderservice.OrderStatus;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "orders")
+@Setter
+@Getter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Order {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
 
-    @NotBlank
-    private String client;
+    private String clientId;
+    private String productId;
+    private int quantity;
 
-    @NotNull
-    private LocalDate date;
+    @Enumerated(EnumType.STRING)
+    private OrderStatus status;
 
-    @PositiveOrZero
-    private double total;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
-    @NotBlank
-    private String status;
-
-    public Order() {
-    }
-
-    public Order(String client, LocalDate date, double total, String status) {
-        this.client = client;
-        this.date = date;
-        this.total = total;
-        this.status = status;
-    }
-
-    // getters / setters
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
-    public String getClient() { return client; }
-    public void setClient(String client) { this.client = client; }
-    public LocalDate getDate() { return date; }
-    public void setDate(LocalDate date) { this.date = date; }
-    public double getTotal() { return total; }
-    public void setTotal(double total) { this.total = total; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
 }
