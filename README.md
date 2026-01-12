@@ -1,377 +1,294 @@
-# Projet microservices - Keycloak demo 🚀
+# Projet Microservices - Keycloak Demo
 
-Petite introduction
-- Ce mini‑projet illustre une application web en architecture micro‑services (React + Spring Boot) sécurisée par Keycloak. L'accent est mis sur la sécurité (OAuth2/OIDC, JWT), la modularité et la conteneurisation.
+## Présentation
 
-Sommaire
-- [Diagrams](#diagrams)
-- [Lancement (Docker Compose)](#lancement-docker-compose)
-- [Fonctionnalités implémentées](#fonctionnalites-implmentees)
-- [Architecture & composants](#architecture--composants)
-- [Tests rapides](#tests-rapides)
-- [DevSecOps & logs](#devsecops--logs)
-- [Conclusion](#conclusion)
+Application web en architecture microservices (React + Spring Boot) sécurisée par Keycloak. 
+Focus: OAuth2/OIDC, JWT, modularité, conteneurisation et sécurité.
 
-## Diagrams
-- Architecture globale  
-  ![Architecture globale](./screens/architecture_global.png)
+---
 
-- Architecture du projet (espace de travail local)  
-  ![Architecture locale](./screens/architecture_du_projet_dans_espace_de_travail_local.png)
+## Architecture globale
 
-- Diagramme de séquence du processus de commande  
-  ![Diagramme de séquence commande](./screens/diagram_sequence_commande.png)
+![Architecture globale du projet](./screens/architecture_global_du_projet_workflow_complet.png)
 
-- Exemple : client ADMIN authentifié et POST/EDIT via Gateway  
-  ![Client ADMIN - POST/EDIT via Gateway](./screens/client_avec_role_admin_authenficated_et_POST_EDDIT_bien_effectuee_via_gateway.png)
+### Composants
 
-## Lancement (Docker Compose)
-Priorité : utiliser la conteneurisation. Le repo contient un `docker-compose.yml` pour démarrer Keycloak (avec Postgres) et importer le realm `ecom`. Si vous voulez démarrer l'ensemble des services via Docker Compose (si les services sont configurés dans le compose) :
+| Composant | Port | Rôle |
+|-----------|------|------|
+| React Frontend | 3000 | SPA authentifié (PKCE) |
+| API Gateway | 8085 | Point d'entrée, validation JWT, routage |
+| Product Service | 8081 | CRUD produits (rôles: ADMIN/CLIENT) |
+| Order Service | 8082 | Gestion commandes, vérification stock |
+| Keycloak | 8080 | Authentification/Autorisation OAuth2 |
+| Postgres (Product) | 5433 | Base données produits |
+| Postgres (Order) | 5432 | Base données commandes |
+
+---
+
+## Fonctionnalités
+
+- **Frontend React (SPA)**: Authentification via Keycloak (PKCE), affichage catalogue, gestion commandes
+- **API Gateway**: Validation JWT centralisée, routage `(/products/**, /orders/**)`
+- **Product Service**: CRUD protégé par rôles ADMIN/CLIENT
+- **Order Service**: Création/consultation commandes avec vérification stock via appel REST vers Product Service
+- **Sécurité**: JWT validés au niveau Gateway et services, rôles ADMIN/CLIENT, isolation données
+- **Persistance**: PostgreSQL pour chaque micro-service (données persistantes)
+- **Conteneurisation**: Docker Compose orchestration complète
+- **DevSecOps**: Workflows GitHub Actions (CodeQL, Semgrep, ESLint, OWASP, Trivy)
+
+---
+
+## Diagrammes de flux
+
+### Processus Product
+
+![Diagramme de séquence - Product](./screens/diagram_sequence_process_product.png)
+
+**Endpoints**:
+- GET /products (ADMIN, CLIENT) - Lister tous les produits
+- GET /products/{id} (ADMIN, CLIENT) - Détail produit
+- POST /products (ADMIN) - Créer produit
+- PUT /products/{id} (ADMIN) - Modifier produit
+- DELETE /products/{id} (ADMIN) - Supprimer produit
+
+### Processus Order
+
+![Diagramme de séquence - Order](./screens/diagram_sequence_process_commande.png)
+
+**Endpoints**:
+- GET /orders (ADMIN) - Lister toutes les commandes
+- GET /orders/my (CLIENT) - Mes commandes
+- POST /orders (CLIENT) - Créer commande (vérification stock automatique)
+- PUT /orders/{id} (ADMIN) - Modifier commande
+- DELETE /orders/{id} (ADMIN) - Supprimer commande
+
+---
+
+## Captures d'écran - Fonctionnement
+
+### Listing des produits
+
+![Produits listing](./screens/get_products_dans_front_client_via_gateway_8085_endpoint_products_success_all_products_listed.png)
+
+### Ajouter un produit (Admin)
+
+![Ajout produit](./screens/user_with_admin_role_can_add_product_from_front_client.png)
+
+### Éditer un produit (Admin)
+
+![Édition produit](./screens/we_can_post_eddit_product_from_gateway_from_front_client_admin_role_authenticated.png)
+
+![Édition produit succès](./screens/we_can_post_eddit_product_from_gateway_from_front_client_admin_role_authenticated_success_alerted.png)
+
+### Ajouter une commande
+
+![Ajout commande](./screens/add_new_order.png)
+
+![Commande création](./screens/add_new_order_by_admin_authorized_success.png)
+
+---
+
+## Prérequis
+
+- Java 21, Maven
+- Node.js + npm
+- Docker & Docker Compose
+
+---
+
+## Démarrage rapide (Docker Compose)
+
 ```bash
-# démarrer les services et construire les images si nécessaire
+# Démarrer tous les services
 docker-compose up -d --build
 
-# suivre les logs (ex : Gateway)
+# Vérifier le statut
+docker-compose ps
+
+# Consulter les logs
 docker-compose logs -f gateway
 ```
 
-Notes pratiques
-- Le compose fourni importe le realm `ecom` automatiquement (fichier `ecom-realm.json`) pour Keycloak.
-- Si le docker-compose ne contient que Keycloak/DB, démarrer d'abord Keycloak via compose, puis démarrer les modules (si exécutés localement) :
-  - Start Keycloak : `docker-compose up -d`
-  - Ensuite lancer les services (dev) si vous préférez en local :
-    - Gateway : cd gateway && ./mvnw spring-boot:run
-    - Product service : cd product-service && ./mvnw spring-boot:run
-    - Order service : cd order-service && ./mvnw spring-boot:run
-  (le mode recommandé reste : conteneuriser et ajouter les services au docker-compose)
+### Accès
 
-## Fonctionnalités implémentées
-- Frontend React (SPA) authentifié via Keycloak (PKCE pour client public).
-- API Gateway (Spring Cloud Gateway) : point d'entrée unique, validation JWT, routage (/products/**, /orders/**).
-- Micro-services :
-  - Product service (CRUD produits) — endpoints protégés par rôles (ADMIN/CLIENT).
-  - Order service (création commandes, vérif. stock, calcul montants).
-- Sécurité : Keycloak (realm `ecom`), JWT validés au niveau Gateway et services, rôles ADMIN/CLIENT.
-- Bases : en dev, H2 en mémoire par service ; docker-compose prévu pour BDD persistantes (Postgres).
-- Conteneurisation : Dockerfile prévus ; docker-compose pour démarrage centralisé.
-- DevSecOps : workflows (CodeQL, Semgrep, ESLint, OWASP Dependency-Check, Trivy) inclus.
+- Frontend: http://localhost:3000
+- Gateway: http://localhost:8085
+- Keycloak: http://localhost:8080 (admin / admin)
+- Product DB: postgresql://localhost:5433 (product / product123)
+- Order DB: postgresql://localhost:5432 (order / order123)
 
-## Architecture & composants
-- Frontend : react-app (communique uniquement via Gateway).
-- Gateway : spring cloud gateway (port par défaut du repo : 8085).
-- Product service : spring-boot (port 8081).
-- Order service : spring-boot (port 8082).
-- Auth : Keycloak (http://127.0.0.1:8080, realm `ecom`).
+### Arrêt et nettoyage
 
-## Tests rapides
-- Obtenir un token via le frontend (ou via Keycloak REST) puis :
 ```bash
-# lister produits via Gateway
-curl -H "Authorization: Bearer <ACCESS_TOKEN>" http://127.0.0.1:8085/products
-
-# créer produit (ADMIN)
-curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer <ACCESS_TOKEN>" \
-  -d '{"name":"Nom","description":"Desc","price":12.5,"quantity":10}' \
-  http://127.0.0.1:8085/products
-```
-
-## DevSecOps & logs
-- Scans automatisés configurés dans les workflows GitHub Actions (CodeQL, Semgrep, Trivy, Dependency-Check).
-- Logs applicatifs via Spring Boot : inclure identification utilisateur (extraction du token) pour traçabilité.
-
-## Conclusion
-- L'implémentation fournie couvre les points essentiels du cahier des charges : front sécurisé, gateway centralisée, micro-services séparés, conteneurisation et pipelines DevSecOps.
-- Propositions d'extensions : déploiement Kubernetes, mTLS, circuit breaker, tests automatisés, monitoring avancé.
-
----
-
-## 🧰 Prérequis
-- Java 21, Maven
-- Node.js + npm
-- Docker & Docker Compose (recommandé pour lancer Keycloak)
-- Ou Keycloak installé localement
-
----
-
-## 🐳 Démarrage rapide avec Docker Compose (Recommandé)
-Le projet inclut un fichier `docker-compose.yml` qui démarre automatiquement Keycloak avec PostgreSQL et importe le realm `ecom`.
-
-1. **Démarrer Keycloak avec Docker Compose** :
-```bash
-docker-compose up -d
-```
-
-2. **Vérifier que les services sont démarrés** :
-```bash
-docker-compose ps
-```
-
-3. **Accéder à Keycloak** :
-   - URL : http://localhost:8080
-   - Admin username : `admin`
-   - Admin password : `admin`
-   - Le realm `ecom` est importé automatiquement !
-
-4. **Arrêter les services** :
-```bash
+# Arrêter (garde les données)
 docker-compose down
-```
 
-5. **Arrêter et supprimer les volumes (données)** :
-```bash
+# Arrêter et supprimer volumes (efface tout)
 docker-compose down -v
 ```
 
-**Note** : Le fichier `docker-compose.yml` inclut :
-- **PostgreSQL** : Base de données pour Keycloak (persistance)
-- **Keycloak** : Import automatique du realm `ecom` depuis `ecom-realm.json`
-- Health checks pour s'assurer que les services sont prêts
-
 ---
 
-## 🔐 Keycloak — exporter / importer le realm (Manuel)
-Pour faciliter la configuration de votre environnement, un export du realm `ecom` est fourni (fichier `ecom-realm.json`).
+## Lancement en mode développement
 
-- Import via l'interface Keycloak (si vous n'utilisez pas Docker Compose) : Realm → **Add realm** → **Select file** → Import `ecom-realm.json`.
-
-- Remarques importantes :
-  - **Ne publiez pas** de secrets (client secrets, mots de passe) dans un dépôt public. Si vous placez `ecom-realm.json` dans Git, redactionnez ou stockez le fichier dans un privé.
-  - Vérifiez après import : clients `ecom-frontend` (public) et `ecom-backend` (confidential), rôles `ADMIN` et `CLIENT`, utilisateurs (`admin`, `client`) et leurs affectations.
-
----
-
-## ▶️ Lancer les services (dev, chacun dans son terminal)
-Note : si `./mvnw` renvoie `Permission denied`, exécutez `chmod +x mvnw` dans chaque module.
-
-- Gateway (port 8085)
 ```bash
+# Terminal 1: Gateway (port 8085)
 cd gateway && ./mvnw spring-boot:run
-```
 
-- Product service (port 8081)
-```bash
+# Terminal 2: Product Service (port 8081)
 cd product-service && ./mvnw spring-boot:run
-```
 
-- Order service (port 8082)
-```bash
+# Terminal 3: Order Service (port 8082)
 cd order-service && ./mvnw spring-boot:run
+
+# Terminal 4: Frontend (port 3000)
+cd react-app && npm ci && npm start
 ```
 
-- Frontend React (port 3000)
+---
+
+## Configuration Keycloak
+
+Le realm `ecom` est importé automatiquement au démarrage depuis `ecom-realm.json`.
+
+### Clients configurés
+- **ecom-frontend** (public) - PKCE pour le SPA
+- **ecom-backend** (confidential) - Usage serveur-serveur si nécessaire
+
+### Rôles
+- ADMIN - Accès complet (créer/modifier/supprimer produits et commandes)
+- CLIENT - Consultation produits, création/gestion ses propres commandes
+
+### Utilisateurs
+- admin / admin (rôle ADMIN)
+- client / client (rôle CLIENT)
+
+---
+
+## Sécurité
+
+### Flow d'authentification
+
+1. Frontend effectue login Keycloak (PKCE)
+2. Reçoit JWT (Access Token)
+3. Envoie JWT dans header `Authorization: Bearer <token>` à chaque requête
+4. Gateway valide JWT et extrait rôles (`realm_access.roles`)
+5. Forward requête + token aux micro-services
+6. Services vérifient JWT + rôles (via `@PreAuthorize`)
+
+### Validation JWT
+
+- Gateway: `JwtAuthenticationConverter` + convertisseur personnalisé pour lire `realm_access.roles`
+- Services: Même convertisseur pour cohérence
+
+### Données de base persistantes
+
+- Product DB: `keycloak-data` volume (Keycloak)
+- Order DB: `order-db-data` volume
+- Product DB: `product-db-data` volume
+
+---
+
+## Tests rapides (curl)
+
 ```bash
-cd react-app
-npm ci
-npm start
+# 1. Obtenir un token via Keycloak
+curl -X POST http://localhost:8080/realms/ecom/protocol/openid-connect/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "client_id=ecom-backend&grant_type=password&username=admin&password=admin" \
+  | jq -r '.access_token' > TOKEN.txt
+
+# 2. Lister produits
+curl -H "Authorization: Bearer $(cat TOKEN.txt)" \
+  http://localhost:8085/products | jq
+
+# 3. Créer produit (ADMIN)
+curl -X POST -H "Authorization: Bearer $(cat TOKEN.txt)" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Laptop","description":"High-end","price":999.99,"quantity":5}' \
+  http://localhost:8085/products | jq
+
+# 4. Lister commandes
+curl -H "Authorization: Bearer $(cat TOKEN.txt)" \
+  http://localhost:8085/orders | jq
 ```
 
 ---
 
-## ✅ Points utiles / URLs
-- Frontend : http://127.0.0.1:3000
-- Gateway : http://127.0.0.1:8085
-  - Routes : `/products/**` -> product service, `/orders/**` -> order service
-- Product service H2 console : http://127.0.0.1:8081/h2-console (JDBC URL: `jdbc:h2:mem:productdb`)
-- Keycloak (admin) : http://127.0.0.1:8080 (realm `ecom`)
+## Dépannage
+
+| Problème | Solution |
+|----------|----------|
+| Keycloak unhealthy | Vérifier logs: `docker logs keycloak` |
+| 403 sur API | Token invalide ou utilisateur sans rôle requis |
+| JWT parsing error | Vérifier que `realm_access.roles` existe dans token |
+| Permission denied mvnw | `chmod +x gateway/mvnw product-service/mvnw order-service/mvnw` |
+| Port déjà utilisé | `docker ps` puis `docker stop <container>` |
 
 ---
 
-## 🧪 Tests rapides (après login via le frontend)
-- Obtenir un token : connectez-vous dans le navigateur via le frontend et copiez l'Access Token depuis `keycloak.token` dans la console JavaScript (ou utilisez la REST API pour obtenir un token).
+## Analyse de sécurité (DevSecOps)
 
-- Exemple : lister produits (via Gateway)
-```bash
-curl -H "Authorization: Bearer <ACCESS_TOKEN>" http://127.0.0.1:8085/products
+Workflows GitHub Actions inclus:
+
+- **CodeQL**: Détection vulnérabilités Java/JavaScript (SAST)
+- **Semgrep**: Patterns de sécurité dangereux
+- **ESLint**: Qualité code React
+- **OWASP Dependency-Check**: CVEs dans dépendances
+- **Trivy**: Vulnérabilités images Docker
+
+Résultats: GitHub Security Tab (onglet "Security")
+
+---
+
+## Structure du projet
+
+```
+ecom/
+  docker-compose.yml          # Orchestration services
+  ecom-realm.json            # Export realm Keycloak
+  
+  gateway/                   # Spring Cloud Gateway
+    src/main/java/.../config/GatewaySecurityConfig.java
+    
+  product-service/           # CRUD produits
+    src/main/java/.../config/SecurityConfig.java
+    src/main/java/.../controller/ProductController.java
+    
+  order-service/             # Gestion commandes
+    src/main/java/.../config/SecurityConfig.java
+    src/main/java/.../controller/OrderController.java
+    
+  react-app/                 # Frontend SPA
+    src/keycloak.js
+    src/hooks/useProducts.js
+    src/hooks/useOrders.js
+    
+  screens/                   # Captures/Diagrammes
 ```
 
-- Exemple : créer produit (ADMIN)
-```bash
-curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer <ACCESS_TOKEN>" \
-  -d '{"name":"Nom","description":"Desc","price":12.5,"quantity":10}' \
-  http://127.0.0.1:8085/products
-```
+---
+
+## Évolutions possibles
+
+- Déploiement Kubernetes (Helm charts)
+- mTLS inter-services
+- Circuit breaker (Resilience4j)
+- Caching Redis
+- Monitoring ELK (Elasticsearch/Logstash/Kibana)
+- Tests automatisés (JUnit, Cypress)
+- API Documentation (Swagger/OpenAPI)
 
 ---
 
-## 🔒 Règles de sécurité
-- Le Gateway valide les JWT et centralise la sécurité. Les micro-services vérifient également les rôles (ADMIN/CLIENT).
-- Frontend : **ecom-frontend** (client public) utilise PKCE (Standard Flow).
-- Backend : **ecom-backend** (confidential) pour usage côté serveur si nécessaire.
+## Support et contribution
+
+- Issues: Décrire le problème/feature demandée
+- PR: Tester localement avant submission
+- Security: Vérifier tokens/secrets avant push
 
 ---
 
-## 🐞 Dépannage rapide
-- Erreur *Invalid parameter: redirect_uri* → vérifier que `Valid Redirect URIs` & `Web Origins` du client frontend contiennent `http://127.0.0.1:3000/*` et `http://127.0.0.1:3000`.
-- React : si `react-scripts: Permission denied` → `rm -rf node_modules && npm ci` puis `chmod +x node_modules/.bin/react-scripts` si nécessaire.
-- 403 sur API → vérifiez que le token contient `realm_access.roles` et que l’utilisateur a le rôle attendu.
+## Licence
 
----
-
-## 🛡️ Sécurité & Analyse de Code
-
-Ce projet inclut un workflow GitHub Actions complet pour l'analyse de sécurité :
-
-### 🔍 Outils Intégrés
-
-1. **CodeQL** - Analyse statique native GitHub (SAST)
-   - Détection de vulnérabilités de sécurité dans Java et JavaScript
-   - Analyse sémantique avancée du code
-   - Intégration native avec GitHub Security tab
-   - Pas de configuration serveur nécessaire
-
-2. **Semgrep** - Analyse SAST moderne et rapide
-   - Détection de patterns de sécurité dangereux
-   - Règles pré-configurées pour OWASP Top 10
-   - Support Java, JavaScript, React, Docker
-   - Résultats en temps réel
-
-3. **ESLint** - Analyse de code JavaScript/React
-   - Détection de problèmes de qualité et sécurité
-   - Règles spécifiques à React
-   - Analyse statique du code frontend
-
-4. **OWASP Dependency-Check** - Analyse des dépendances
-   - Détection de CVEs dans les dépendances Maven et npm
-   - Génération de rapports SARIF pour GitHub Security
-   - Seuil configurable (CVSS ≥ 7 par défaut)
-
-5. **Trivy** - Scan des images Docker
-   - Analyse des vulnérabilités dans les images Docker
-   - Détection des failles OS et applicatives
-   - Rapports pour chaque service (gateway, product, order, react-app)
-
-### 📖 Documentation
-
-- **[Guide de Configuration](SECURITY_WORKFLOW_SETUP.md)** - Configuration complète et premiers pas
-- **[Référence Rapide](SECURITY_QUICK_REFERENCE.md)** - Commandes et aide-mémoire
-- **[Documentation Workflow](.github/workflows/README.md)** - Détails techniques du workflow
-
-### 🚀 Démarrage Rapide
-
-1. **Aucune configuration serveur nécessaire !** 
-   - CodeQL, Semgrep et ESLint fonctionnent directement dans GitHub Actions
-   - Pas besoin de SONAR_TOKEN ou SONAR_HOST_URL
-
-2. Le workflow s'exécute automatiquement sur :
-   - Push vers `main`, `master`, ou `develop`
-   - Pull Requests
-   - Planification hebdomadaire (lundi 00:00 UTC)
-   - Déclenchement manuel
-
-3. Consultez les résultats :
-   - **GitHub Security Tab** : Alertes CodeQL, Semgrep, OWASP et Trivy
-   - **Code Scanning Alerts** : Vulnérabilités détaillées avec suggestions de correction
-   - **Workflow Artifacts** : Rapports détaillés HTML/JSON
-
-### ✨ Avantages des Nouveaux Outils
-
-- ✅ **Zéro Configuration** - Pas de serveur SonarQube à configurer
-- ✅ **Gratuit pour Projets Publics** - Tous les outils sont gratuits sur GitHub
-- ✅ **Intégration Native** - Résultats directement dans GitHub Security
-- ✅ **Analyse Rapide** - Résultats en quelques minutes
-- ✅ **Suggestions de Correction** - CodeQL fournit des exemples de code corrigé
-
-Pour plus d'informations, consultez le [guide de configuration complet](SECURITY_WORKFLOW_SETUP.md).
-
----
-
-## 📚 Contribuer
-- Ajoutez issues/PR pour les nouvelles fonctionnalités (Orders UI, tests, Docker compose, CI/CD, sécurité scans).
-- Assurez-vous que tous les tests de sécurité passent avant de soumettre une PR.
-- Documentez toute suppression de vulnérabilité dans les fichiers de configuration appropriés.
-
----
-
-## Documentation technique (conforme au cahier des charges)
-
-Objectif
-- Concevoir une application web moderne en architecture micro-services sécurisée pour la gestion des produits et commandes. L'implémentation fournie suit les standards : OAuth2/OpenID Connect, Gateway centralisée, conteneurisation et pipelines DevSecOps.
-
-Architecture générale (état)
-- Frontend : React (SPA) — implémenté.
-- API Gateway : Spring Cloud Gateway (point d'entrée unique, validation JWT, routage) — implémenté.
-- Micro-services : Product (port 8081) et Order (port 8082) — Spring Boot indépendants — implémentés.
-- Auth : Keycloak (realm `ecom`) — fourni via docker-compose / ecom-realm.json — implémenté.
-- Bases de données : bases séparées (en dev : H2 en mémoire). Chaque micro-service gère sa propre BDD — implémenté.
-
-Architecture visuelle
-![Architecture du projet (espace de travail local)](./screens/architecture_du_projet_dans_espace_de_travail_local.png)
-![Architecture globale](./screens/architecture_global.png)
-
-1) Frontend Web (React)
-- Authentification : Keycloak (OAuth2 / OIDC) avec PKCE pour le client public `ecom-frontend`.
-- Session : gestion via tokens JWT fournis par Keycloak (utilisés pour les appels API vers la Gateway).
-- Fonctionnalités : affichage catalogue, création/consultation de commandes, interface adaptée selon rôle (ADMIN / CLIENT).
-- Communication : toutes les requêtes passent par l'API Gateway (pas d'accès direct aux micro-services).
-- Gestion d'erreurs : 401/403 gérés côté client (redirection / message).
-
-2) Micro-service Produit (Product service)
-- Endpoints CRUD :
-  - POST /products (ADMIN)
-  - PUT /products/{id} (ADMIN)
-  - DELETE /products/{id} (ADMIN)
-  - GET /products (ADMIN, CLIENT)
-  - GET /products/{id} (ADMIN, CLIENT)
-- Modèle produit : id, name, description, price, quantity.
-- Persistance : H2 en mémoire (dev); Dockerfile et config prêts pour PostgreSQL si souhaité.
-
-3) Micro-service Commande (Order service)
-- Endpoints :
-  - POST /orders (CLIENT) — création de commande (vérification stock).
-  - GET /orders (ADMIN) — lister toutes les commandes.
-  - GET /orders/my (CLIENT) — consulter ses commandes.
-- Logique : calcul automatique du montant total, vérification disponibilité via appel REST vers Product service.
-- Format ligne commande : { idProduit, quantité, prix }.
-
-4) Communication inter-services
-- Appels REST entre Order -> Product pour vérification stock et récupération prix.
-- Propagation du token JWT lors des appels inter-services (Gateway / services configurés pour forward).
-- Gestion des erreurs métiers (produit inexistant, stock insuffisant) renvoyées avec codes HTTP appropriés.
-
-5) Sécurité (Keycloak)
-- Keycloak assure authentification et autorisation.
-- Tokens JWT validés au niveau du Gateway et au niveau des micro-services.
-- Rôles utilisés : ADMIN, CLIENT.
-- Configuration : realm `ecom`, clients `ecom-frontend` (public) et `ecom-backend` (confidential).
-
-6) API Gateway
-- Point d'entrée unique pour le frontend (routes /products/**, /orders/**).
-- Validation JWT centralisée, routage, et règles d'autorisation. Aucune logique métier dans la gateway.
-
-7) Gestion des données
-- Une BDD par micro-service (principe micro-services respecté).
-- En dev, H2 en mémoire ; Docker Compose prévu pour base persistante (Postgres) si activée.
-
-8) Conteneurisation
-- Dockerfile présent pour chaque composant (frontend, gateway, product-service, order-service).
-- docker-compose.yml fourni pour démarrer Keycloak, bases, et services.
-
-9) DevSecOps
-- Intégration d'outils SAST/DAST : CodeQL, Semgrep, ESLint, OWASP Dependency-Check, Trivy.
-- Workflows GitHub Actions pré-configurés pour analyses automatiques.
-
-10) Journalisation et traçabilité
-- Logs d'accès et d'erreurs présents dans les services (Spring Boot logging).
-- Identification utilisateur (ID/rôle) ajoutable aux logs via extraction du token (implémentation de base fournie).
-
-Diagrams & captures
-- Diagramme de séquence du processus de commande :
-  ![Diagramme de séquence commande](./screens/diagram_sequence_commande.png)
-
-- Capture: client avec rôle ADMIN et POST/EDIT via Gateway :
-  ![Client ADMIN - POST/EDIT via Gateway](./screens/client_avec_role_admin_authenficated_et_POST_EDDIT_bien_effectuee_via_gateway.png)
-
-Livrables fournis
-- Code source complet versionné (modules : gateway, product-service, order-service, react-app).
-- docker-compose.yml (Keycloak + DBs + import realm).
-- ecom-realm.json (export du realm pour import manuel).
-- Diagrams/images (dans /screens).
-- Documentation technique (ce README).
-- Workflows DevSecOps intégrés (GitHub Actions).
-
-État d'avancement (résumé)
-- Fonctionnalités principales (auth, gateway, CRUD produits, création commandes, vérif. stock) : implémentées.
-- Conteneurisation et docker-compose : fournis et testés localement.
-- Analyses de sécurité : workflows en place (vérifier tokens et secrets avant push public).
-- Extensions possibles (bonus) : déploiement Kubernetes, mTLS, circuit breaker, tests automatisés, monitoring avancé.
-
+MIT
