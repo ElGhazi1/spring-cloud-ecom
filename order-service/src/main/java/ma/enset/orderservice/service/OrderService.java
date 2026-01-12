@@ -12,7 +12,7 @@ public interface OrderService {
     List<OrderResponseDTO> findAll();
     List<OrderResponseDTO> findByClientId(String clientId);
     OrderResponseDTO findById(String id);
-    OrderResponseDTO save(CreateOrderRequestDTO request);
+    OrderResponseDTO save(CreateOrderRequestDTO request, String clientId);
     OrderResponseDTO update(String id, UpdateOrderRequestDTO request);
     void delete(String id);
 }

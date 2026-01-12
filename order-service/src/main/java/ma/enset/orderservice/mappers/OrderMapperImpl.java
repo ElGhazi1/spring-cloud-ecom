@@ -11,7 +11,6 @@ public class OrderMapperImpl implements OrderMapper {
     @Override
     public CreateOrderRequestDTO toCreateOrderRequestDTO(Order order) {
         return CreateOrderRequestDTO.builder()
-                .clientId(order.getClientId())
                 .productId(order.getProductId())
                 .quantity(order.getQuantity())
                 .build();
@@ -33,7 +32,6 @@ public class OrderMapperImpl implements OrderMapper {
     @Override
     public Order toEntity(CreateOrderRequestDTO requestDTO) {
         return Order.builder()
-                .clientId(requestDTO.clientId())
                 .productId(requestDTO.productId())
                 .quantity(requestDTO.quantity())
                 .build();

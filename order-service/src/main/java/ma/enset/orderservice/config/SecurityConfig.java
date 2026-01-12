@@ -50,22 +50,35 @@ public class SecurityConfig {
     @Bean
     public Converter<Jwt, Collection<GrantedAuthority>> jwtGrantedAuthoritiesConverter() {
         return jwt -> {
-            // Extract roles from Keycloak's nested realm_access.roles structure
+            // Try realm roles first
             Map<String, Object> realmAccess = jwt.getClaim("realm_access");
-            if (realmAccess == null) {
-                return List.of();
+            if (realmAccess != null) {
+                @SuppressWarnings("unchecked")
+                List<String> realmRoles = (List<String>) realmAccess.get("roles");
+                if (realmRoles != null && !realmRoles.isEmpty()) {
+                    return realmRoles.stream()
+                            .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                            .collect(Collectors.toList());
+                }
             }
 
-            @SuppressWarnings("unchecked")
-            List<String> roles = (List<String>) realmAccess.get("roles");
-            if (roles == null) {
-                return List.of();
+            // Fallback to client roles (resource_access)
+            Map<String, Object> resourceAccess = jwt.getClaim("resource_access");
+            if (resourceAccess != null) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> clientAccess = (Map<String, Object>) resourceAccess.get("order-service");
+                if (clientAccess != null) {
+                    @SuppressWarnings("unchecked")
+                    List<String> clientRoles = (List<String>) clientAccess.get("roles");
+                    if (clientRoles != null && !clientRoles.isEmpty()) {
+                        return clientRoles.stream()
+                                .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                                .collect(Collectors.toList());
+                    }
+                }
             }
 
-            // Convert roles to Spring Security authorities with ROLE_ prefix
-            return roles.stream()
-                    .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
-                    .collect(Collectors.toList());
+            return List.of();
         };
     }
 }

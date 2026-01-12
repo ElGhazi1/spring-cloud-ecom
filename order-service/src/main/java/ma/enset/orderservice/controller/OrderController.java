@@ -59,16 +59,9 @@ public class OrderController {
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','CLIENT')")
     public OrderResponseDTO create(@RequestBody CreateOrderRequestDTO request, Authentication authentication) {
-        // If user is not admin, ensure they can only create orders for themselves
-        if (authentication.getAuthorities().stream()
-                .noneMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
-            String clientId = getUserIdFromToken(authentication);
-            // Validate that the request clientId matches the authenticated user
-            if (request.clientId() != null && !request.clientId().equals(clientId)) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only create orders for yourself");
-            }
-        }
-        return orderService.save(request);
+        // Extract clientId from JWT token
+        String clientId = getUserIdFromToken(authentication);
+        return orderService.save(request, clientId);
     }
 
     @PutMapping("/{id}")

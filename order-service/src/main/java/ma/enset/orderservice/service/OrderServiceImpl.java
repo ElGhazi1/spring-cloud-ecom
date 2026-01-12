@@ -42,9 +42,10 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public OrderResponseDTO save(CreateOrderRequestDTO request) {
+    public OrderResponseDTO save(CreateOrderRequestDTO request, String clientId) {
 
         Order order = mapper.toEntity(request);
+        order.setClientId(clientId);
         order.setStatus(OrderStatus.PENDING);
         order.setCreatedAt(LocalDateTime.now());
         order.setUpdatedAt(LocalDateTime.now());
