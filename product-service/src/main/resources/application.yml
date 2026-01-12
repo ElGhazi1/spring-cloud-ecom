@@ -6,16 +6,14 @@ spring:
     name: product-service
 
   datasource:
-    url: jdbc:h2:mem:productdb
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/productdb}
+    username: ${SPRING_DATASOURCE_USERNAME:product}
+    password: ${SPRING_DATASOURCE_PASSWORD:product123}
+
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create
     show-sql: true
-
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
 
   security:
     oauth2:

@@ -56,6 +56,25 @@ services:
       timeout: 5s
       retries: 5
 
+  product-db:
+    image: postgres:15-alpine
+    container_name: product-db
+    environment:
+      POSTGRES_DB: productdb
+      POSTGRES_USER: product
+      POSTGRES_PASSWORD: product123
+    ports:
+      - "5433:5432"
+    networks:
+      - ecom-network
+    volumes:
+      - product-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U product -d productdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   order-service:
     build:
       context: ./order-service
@@ -83,8 +102,13 @@ services:
       - ecom-network
     environment:
       - OAUTH2_RESOURCE_SERVER_JWT_URI=http://keycloak:8080/realms/ecom
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://product-db:5432/productdb
+      - SPRING_DATASOURCE_USERNAME=product
+      - SPRING_DATASOURCE_PASSWORD=product123
     depends_on:
       keycloak:
+        condition: service_healthy
+      product-db:
         condition: service_healthy
 
   react-app:
@@ -107,4 +131,5 @@ networks:
 
 volumes:
   order-db-data:
+  product-db-data:
 
