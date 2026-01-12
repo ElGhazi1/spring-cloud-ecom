@@ -53,6 +53,7 @@ function App({ keycloak }) {
         editingOrderId,
         handleProductSelection,
         handleQuantityChange,
+        handleStatusChange,
         handleCreateOrder,
         editOrder,
         handleDeleteOrder,
@@ -235,7 +236,9 @@ function App({ keycloak }) {
                                         onSubmit={handleCreateOrder}
                                         onProductSelect={handleProductSelection}
                                         onQuantityChange={handleQuantityChange}
+                                        onStatusChange={handleStatusChange}
                                         onCancel={cancelOrderEdit}
+                                        hasRole={hasRole}
                                         trigger={<div style={{ display: 'none' }} />}
                                     />
                                 )}

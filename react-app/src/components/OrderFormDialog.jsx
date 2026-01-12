@@ -15,6 +15,14 @@ import { Label } from './ui/label';
 import { Select } from './ui/select';
 import { Card } from './ui/card';
 
+// Order status values from backend OrderStatus enum
+const ORDER_STATUSES = [
+    { value: 'PENDING', label: 'Pending' },
+    { value: 'PROCESSING', label: 'Processing' },
+    { value: 'COMPLETED', label: 'Completed' },
+    { value: 'CANCELLED', label: 'Cancelled' }
+];
+
 const OrderFormDialog = ({
     newOrder,
     editingOrderId,
@@ -23,8 +31,10 @@ const OrderFormDialog = ({
     onSubmit,
     onProductSelect,
     onQuantityChange,
+    onStatusChange,
     onCancel,
-    trigger
+    trigger,
+    hasRole
 }) => {
     const [open, setOpen] = useState(false);
 
@@ -136,6 +146,25 @@ const OrderFormDialog = ({
                                 disabled={!selectedProduct}
                             />
                         </div>
+
+                        {/* Status dropdown - only show for ADMIN users when editing */}
+                        {hasRole && hasRole('ADMIN') && editingOrderId && (
+                            <div className="grid gap-2">
+                                <Label htmlFor="status">Order Status</Label>
+                                <Select
+                                    id="status"
+                                    value={newOrder.status || 'PENDING'}
+                                    onChange={onStatusChange}
+                                    required
+                                >
+                                    {ORDER_STATUSES.map(status => (
+                                        <option key={status.value} value={status.value}>
+                                            {status.label}
+                                        </option>
+                                    ))}
+                                </Select>
+                            </div>
+                        )}
 
                         <div className="rounded-lg bg-gradient-to-r from-purple-600 to-purple-800 p-4 text-white">
                             <div className="flex items-center justify-between">

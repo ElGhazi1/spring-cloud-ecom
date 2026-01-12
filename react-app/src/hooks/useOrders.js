@@ -5,7 +5,13 @@ import { useAlert } from '../contexts/AlertContext';
 export const useOrders = (keycloak, apiBase, products, hasRole) => {
     const [orders, setOrders] = useState([]);
     const [loadingOrders, setLoadingOrders] = useState(false);
-    const [newOrder, setNewOrder] = useState({ productId: '', productName: '', quantity: '1', totalPrice: '' });
+    const [newOrder, setNewOrder] = useState({
+        productId: '',
+        productName: '',
+        quantity: '1',
+        totalPrice: '',
+        status: 'PENDING'
+    });
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [editingOrderId, setEditingOrderId] = useState(null);
     const alert = useAlert();
@@ -50,7 +56,8 @@ export const useOrders = (keycloak, apiBase, products, hasRole) => {
                 productId: '',
                 productName: '',
                 quantity: '1',
-                totalPrice: ''
+                totalPrice: '',
+                status: 'PENDING'
             });
         }
     };
@@ -65,6 +72,13 @@ export const useOrders = (keycloak, apiBase, products, hasRole) => {
         });
     };
 
+    const handleStatusChange = (e) => {
+        setNewOrder({
+            ...newOrder,
+            status: e.target.value
+        });
+    };
+
     const handleCreateOrder = async (e) => {
         e.preventDefault();
         try {
@@ -74,9 +88,10 @@ export const useOrders = (keycloak, apiBase, products, hasRole) => {
             const clientId = keycloak.tokenParsed?.preferred_username || keycloak.tokenParsed?.sub;
 
             if (editingOrderId) {
-                // For update, only send quantity (UpdateOrderRequestDTO)
+                // For update, send quantity and status (UpdateOrderRequestDTO)
                 const updatePayload = {
-                    quantity: parseInt(newOrder.quantity, 10)
+                    quantity: parseInt(newOrder.quantity, 10),
+                    status: newOrder.status || 'PENDING'
                 };
 
                 await axios.put(`${apiBase}/orders/${editingOrderId}`, updatePayload, {
@@ -98,7 +113,7 @@ export const useOrders = (keycloak, apiBase, products, hasRole) => {
                 alert.success('Success', 'Order created successfully!');
             }
 
-            setNewOrder({ productId: '', productName: '', quantity: '1', totalPrice: '' });
+            setNewOrder({ productId: '', productName: '', quantity: '1', totalPrice: '', status: 'PENDING' });
             setSelectedProduct(null);
             fetchOrders();
         } catch (e) {
@@ -119,7 +134,8 @@ export const useOrders = (keycloak, apiBase, products, hasRole) => {
             productId: o.productId,
             productName: product ? product.name : '',
             quantity: o.quantity,
-            totalPrice: totalPrice
+            totalPrice: totalPrice,
+            status: o.status || 'PENDING'
         });
         setEditingOrderId(o.id);
     };
@@ -140,7 +156,7 @@ export const useOrders = (keycloak, apiBase, products, hasRole) => {
 
     const cancelOrderEdit = () => {
         setEditingOrderId(null);
-        setNewOrder({ productId: '', productName: '', quantity: '1', totalPrice: '' });
+        setNewOrder({ productId: '', productName: '', quantity: '1', totalPrice: '', status: 'PENDING' });
         setSelectedProduct(null);
     };
 
@@ -160,6 +176,7 @@ export const useOrders = (keycloak, apiBase, products, hasRole) => {
         editingOrderId,
         handleProductSelection,
         handleQuantityChange,
+        handleStatusChange,
         handleCreateOrder,
         editOrder,
         handleDeleteOrder,
