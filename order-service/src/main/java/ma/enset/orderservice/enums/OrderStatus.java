@@ -1,4 +1,4 @@
-package ma.enset.orderservice;
+package ma.enset.orderservice.enums;
 
 public enum OrderStatus {
     PENDING,

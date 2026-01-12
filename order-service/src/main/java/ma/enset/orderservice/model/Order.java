@@ -2,7 +2,7 @@ package ma.enset.orderservice.model;
 
 import jakarta.persistence.*;
 import lombok.*;
-import ma.enset.orderservice.OrderStatus;
+import ma.enset.orderservice.enums.OrderStatus;
 
 import java.time.LocalDateTime;
 
