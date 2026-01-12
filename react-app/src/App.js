@@ -1,307 +1,260 @@
-import axios from "axios";
-import {useEffect, useState} from "react";
+import React, { useState, useEffect } from 'react';
+import { useProducts } from './hooks/useProducts';
+import { useOrders } from './hooks/useOrders';
+import ProductsTable from './components/ProductsTable';
+import OrdersTable from './components/OrdersTable';
+import ProductFormDialog from './components/ProductFormDialog';
+import OrderFormDialog from './components/OrderFormDialog';
+import { Button } from './components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
+import { Badge } from './components/ui/badge';
+import { Edit, User, Mail, Shield, Package, ShoppingCart, LogOut } from 'lucide-react';
 
 function App({ keycloak }) {
-    const [products, setProducts] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [form, setForm] = useState({ name: '', description: '', price: '', quantity: '' });
-    const [editingId, setEditingId] = useState(null);
-
     const apiBase = process.env.API_BASE_URL || "http://localhost:8085";
-
-    async function fetchProducts() {
-        setLoading(true);
-        try {
-            await keycloak.updateToken(30);
-            const response = await axios.get(`${apiBase}/products`, {
-                headers: { Authorization: `Bearer ${keycloak.token}` }
-            });
-            const data = response.data;
-            // Normalize response to an array to avoid runtime errors
-            if (Array.isArray(data)) {
-                setProducts(data);
-            } else if (data && Array.isArray(data.content)) { // handle pageable responses
-                setProducts(data.content);
-            } else {
-                console.warn('Unexpected products response shape:', data);
-                setProducts([]);
-            }
-        } catch (e) {
-            console.error(e);
-            alert('Erreur lors de la récupération des produits');
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    // Orders state and operations
-    const [orders, setOrders] = useState([]);
-    const [loadingOrders, setLoadingOrders] = useState(false);
-    const [newOrder, setNewOrder] = useState({ productName: '', quantity: '', totalPrice: '' });
-    const [editingOrderId, setEditingOrderId] = useState(null);
     const hasRole = (role) => keycloak.tokenParsed?.realm_access?.roles?.includes(role);
 
-    async function fetchOrders() {
-        setLoadingOrders(true);
-        try {
-            await keycloak.updateToken(30);
-            console.log('[DEBUG] fetchOrders: roles=', keycloak.tokenParsed?.realm_access?.roles);
-            const resp = await axios.get(`${apiBase}/orders`, {
-                headers: { Authorization: `Bearer ${keycloak.token}` }
-            });
-            console.log('[DEBUG] fetchOrders response status=', resp.status);
-            setOrders(Array.isArray(resp.data) ? resp.data : (resp.data?.content || []));
-        } catch (e) {
-            console.error('Erreur fetchOrders', e);
-            const status = e?.response?.status;
-            const server = e?.response?.data || e?.response?.statusText || e?.message;
-            alert(`Erreur lors de la récupération des commandes (${status}): ${JSON.stringify(server)}`);
-            setOrders([]);
-        } finally {
-            setLoadingOrders(false);
-        }
-    }
+    // Tab navigation state with URL hash support
+    const [activeTab, setActiveTab] = useState('profile');
 
+    // Initialize tab from URL hash on mount
     useEffect(() => {
-        fetchProducts();
-        const roles = keycloak.tokenParsed?.realm_access?.roles || [];
-        if (keycloak.authenticated && (roles.includes('CLIENT') || roles.includes('ADMIN'))) {
-            fetchOrders();
+        const hash = window.location.hash.replace('#', '');
+        if (hash && ['profile', 'products', 'orders'].includes(hash)) {
+            setActiveTab(hash);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [keycloak.authenticated, keycloak.tokenParsed?.realm_access?.roles?.length]);
+    }, []);
 
-    const submitForm = async (e) => {
-        e.preventDefault();
-        try {
-            await keycloak.updateToken(30);
-            const payload = {
-                name: form.name,
-                description: form.description,
-                // convert to numeric types to match backend model
-                price: parseFloat(form.price),
-                quantity: parseInt(form.quantity, 10)
-            };
-
-            if (editingId) {
-                await axios.put(`${apiBase}/products/${editingId}`, payload, {
-                    headers: { Authorization: `Bearer ${keycloak.token}` }
-                });
-                setEditingId(null);
-            } else {
-                await axios.post(`${apiBase}/products`, payload, {
-                    headers: { Authorization: `Bearer ${keycloak.token}` }
-                });
-            }
-
-            setForm({ name: '', description: '', price: '', quantity: '' });
-            fetchProducts();
-        } catch (e) {
-            console.error(e);
-            const server = e?.response?.data || e?.response?.statusText || e?.message;
-            const serverStr = typeof server === 'object' ? JSON.stringify(server) : server;
-            alert(`Erreur lors de l'enregistrement: ${serverStr}`);
-        }
+    // Update URL hash when tab changes
+    const handleTabChange = (tab) => {
+        setActiveTab(tab);
+        window.location.hash = tab;
     };
 
-    const editProduct = (p) => {
-        setForm({ name: p.name, description: p.description, price: p.price, quantity: p.quantity });
-        setEditingId(p.id);
-    };
+    // Use custom hooks
+    const {
+        products,
+        loading,
+        form,
+        editingId,
+        setForm,
+        submitForm,
+        editProduct,
+        deleteProduct,
+        cancelEdit
+    } = useProducts(keycloak, apiBase);
 
-    const deleteProduct = async (id) => {
-        if (!window.confirm('Supprimer ce produit ?')) return;
-        try {
-            await keycloak.updateToken(30);
-            await axios.delete(`${apiBase}/products/${id}`, {
-                headers: { Authorization: `Bearer ${keycloak.token}` }
-            });
-            fetchProducts();
-        } catch (e) {
-            console.error(e);
-            alert('Erreur lors de la suppression');
-        }
-    };
+    const {
+        orders,
+        loadingOrders,
+        newOrder,
+        selectedProduct,
+        editingOrderId,
+        handleProductSelection,
+        handleQuantityChange,
+        handleCreateOrder,
+        editOrder,
+        handleDeleteOrder,
+        cancelOrderEdit
+    } = useOrders(keycloak, apiBase, products, hasRole);
 
-    // Orders handlers
-    const handleCreateOrder = async (e) => {
-        e.preventDefault();
-        try {
-            await keycloak.updateToken(30);
-            const payload = {
-                productName: newOrder.productName,
-                quantity: parseInt(newOrder.quantity, 10),
-                // backend expects `price`; frontend collects `totalPrice`
-                price: parseFloat(newOrder.totalPrice)
-            };
+    // Handle ordering directly from product table
+    const handleOrderFromProduct = (product) => {
+        // Set the product for the order
+        const event = { target: { value: product.id.toString() } };
+        handleProductSelection(event);
 
-            if (editingOrderId) {
-                await axios.put(`${apiBase}/orders/${editingOrderId}`, payload, {
-                    headers: { Authorization: `Bearer ${keycloak.token}` }
-                });
-                setEditingOrderId(null);
-            } else {
-                await axios.post(`${apiBase}/orders`, payload, {
-                    headers: { Authorization: `Bearer ${keycloak.token}` }
-                });
-            }
-
-            setNewOrder({ productName: '', quantity: '', totalPrice: '' });
-            fetchOrders();
-        } catch (e) {
-            console.error('Erreur createOrder', e);
-            const server = e?.response?.data || e?.response?.statusText || e?.message;
-            const serverStr = typeof server === 'object' ? JSON.stringify(server) : server;
-            alert(`Erreur lors de l'enregistrement: ${serverStr}`);
-        }
-    };
-
-    const editOrder = (o) => {
-        setNewOrder({ productName: o.productName, quantity: o.quantity, totalPrice: o.price });
-        setEditingOrderId(o.id);
-    };
-
-    const handleDeleteOrder = async (id) => {
-        if (!window.confirm('Supprimer cette commande ?')) return;
-        try {
-            await keycloak.updateToken(30);
-            await axios.delete(`${apiBase}/orders/${id}`, {
-                headers: { Authorization: `Bearer ${keycloak.token}` }
-            });
-            fetchOrders();
-        } catch (e) {
-            console.error('Erreur deleteOrder', e);
-            alert('Erreur lors de la suppression');
-        }
+        // Switch to orders tab
+        handleTabChange('orders');
     };
 
     return (
-        <div style={{ padding: "30px", fontFamily: "Arial" }}>
-            <h2>React + Keycloak + API Gateway</h2>
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+            <div className="container mx-auto p-6 max-w-7xl">
+                {/* Header */}
+                <Card className="mb-6">
+                    <CardContent className="pt-6">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                            <div>
+                                <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent mb-4">
+                                    E-Commerce Platform
+                                </h1>
+                            </div>
+                            <Button
+                                variant="outline"
+                                onClick={() => keycloak.logout()}
+                                className="w-full md:w-auto"
+                            >
+                                <LogOut className="w-4 h-4 mr-2" />
+                                Logout
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
 
-            <p>
-                Utilisateur : <b>{keycloak.idTokenParsed?.preferred_username}</b>
-            </p>
-            <p>
-                Email : <b>{keycloak.idTokenParsed?.email}</b>
-            </p>
-            <p>
-                Rôles : <b> {keycloak.tokenParsed?.realm_access?.roles?.join(", ")}</b>
-            </p>
+                {/* Tabs */}
+                <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+                    <TabsList className="grid w-full grid-cols-3 mb-6">
+                        <TabsTrigger value="profile">
+                            <User className="w-4 h-4 mr-2" />
+                            Profile
+                        </TabsTrigger>
+                        <TabsTrigger value="products">
+                            <Package className="w-4 h-4 mr-2" />
+                            Products
+                        </TabsTrigger>
+                        {(hasRole('CLIENT') || hasRole('ADMIN')) && (
+                            <TabsTrigger value="orders">
+                                <ShoppingCart className="w-4 h-4 mr-2" />
+                                Orders
+                            </TabsTrigger>
+                        )}
+                    </TabsList>
 
-            <div style={{ marginTop: 20 }}>
-                <h3>Produits</h3>
-                {loading ? <div>Chargement...</div> : (
-                    <table border={1} cellPadding={8} style={{ borderCollapse: 'collapse' }}>
-                        <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Nom</th>
-                            <th>Description</th>
-                            <th>Prix</th>
-                            <th>Quantité</th>
-                            <th>Actions</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {Array.isArray(products) ? products.map(p => (
-                            <tr key={p.id}>
-                                <td>{p.id}</td>
-                                <td>{p.name}</td>
-                                <td>{p.description}</td>
-                                <td>{p.price}</td>
-                                <td>{p.quantity}</td>
-                                <td>
-                                    {keycloak.tokenParsed?.realm_access?.roles?.includes('ADMIN') && (
-                                        <>
-                                            <button onClick={() => editProduct(p)}>Edit</button>
-                                            <button onClick={() => deleteProduct(p.id)} style={{ marginLeft: 8 }}>Delete</button>
-                                        </>
+                    {/* Profile Tab */}
+                    <TabsContent value="profile">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>User Profile</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                <div className="grid gap-4">
+                                    <div className="flex items-start gap-4 p-4 rounded-lg bg-muted/50">
+                                        <User className="w-5 h-5 text-purple-600 mt-0.5" />
+                                        <div className="flex-1">
+                                            <p className="text-sm font-medium text-muted-foreground">Username</p>
+                                            <p className="text-lg font-semibold">{keycloak.idTokenParsed?.preferred_username}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-start gap-4 p-4 rounded-lg bg-muted/50">
+                                        <Mail className="w-5 h-5 text-purple-600 mt-0.5" />
+                                        <div className="flex-1">
+                                            <p className="text-sm font-medium text-muted-foreground">Email</p>
+                                            <p className="text-lg font-semibold">{keycloak.idTokenParsed?.email}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-start gap-4 p-4 rounded-lg bg-muted/50">
+                                        <Shield className="w-5 h-5 text-purple-600 mt-0.5" />
+                                        <div className="flex-1">
+                                            <p className="text-sm font-medium text-muted-foreground mb-2">Roles</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {keycloak.tokenParsed?.realm_access?.roles?.map(role => (
+                                                    <Badge key={role} variant="default" className="text-sm">
+                                                        {role}
+                                                    </Badge>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    {/* Products Tab */}
+                    <TabsContent value="products">
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center">
+                                <h2 className="text-2xl font-semibold">Products</h2>
+                                {hasRole('ADMIN') && (
+                                    <ProductFormDialog
+                                        form={form}
+                                        editingId={editingId}
+                                        onSubmit={submitForm}
+                                        onChange={setForm}
+                                        onCancel={cancelEdit}
+                                        trigger={
+                                            editingId ? (
+                                                <Button variant="outline">
+                                                    <Edit className="w-4 h-4 mr-2" />
+                                                    Edit Product
+                                                </Button>
+                                            ) : null
+                                        }
+                                    />
+                                )}
+                            </div>
+
+                            <ProductsTable
+                                products={products}
+                                loading={loading}
+                                hasRole={hasRole}
+                                onEdit={editProduct}
+                                onDelete={deleteProduct}
+                                onOrder={handleOrderFromProduct}
+                            />
+
+                            {/* Order dialog for ordering from Products tab */}
+                            {(hasRole('CLIENT') || hasRole('ADMIN')) && (
+                                <OrderFormDialog
+                                    newOrder={newOrder}
+                                    editingOrderId={null}
+                                    products={products}
+                                    selectedProduct={selectedProduct}
+                                    onSubmit={handleCreateOrder}
+                                    onProductSelect={handleProductSelection}
+                                    onQuantityChange={handleQuantityChange}
+                                    onCancel={cancelOrderEdit}
+                                    trigger={<div style={{ display: 'none' }} />}
+                                />
+                            )}
+                        </div>
+                    </TabsContent>
+
+                    {/* Orders Tab */}
+                    {(hasRole('CLIENT') || hasRole('ADMIN')) && (
+                        <TabsContent value="orders">
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <h2 className="text-2xl font-semibold">Orders</h2>
+                                    {hasRole('CLIENT') && !editingOrderId && (
+                                        <OrderFormDialog
+                                            newOrder={newOrder}
+                                            editingOrderId={editingOrderId}
+                                            products={products}
+                                            selectedProduct={selectedProduct}
+                                            onSubmit={handleCreateOrder}
+                                            onProductSelect={handleProductSelection}
+                                            onQuantityChange={handleQuantityChange}
+                                            onCancel={cancelOrderEdit}
+                                        />
                                     )}
-                                </td>
-                            </tr>
-                        )) : <tr><td colSpan={6}>Aucun produit</td></tr>}
-                        </tbody>
-                    </table>
-                )}
+                                </div>
 
-                {keycloak.tokenParsed?.realm_access?.roles?.includes('ADMIN') && (
-                    <>
-                        <h4 style={{ marginTop: 20 }}>{editingId ? 'Modifier produit' : 'Créer produit'}</h4>
-                        <form onSubmit={submitForm} style={{ display: 'grid', gap: 8, maxWidth: 500 }}>
-                            <input placeholder="Nom" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required />
-                            <input placeholder="Description" value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
-                            <input placeholder="Prix" value={form.price} onChange={e => setForm({...form, price: e.target.value})} required />
-                            <input placeholder="Quantité" value={form.quantity} onChange={e => setForm({...form, quantity: e.target.value})} required />
-                            <div>
-                                <button type="submit">{editingId ? 'Enregistrer' : 'Créer'}</button>
-                                {editingId && <button type="button" onClick={() => { setEditingId(null); setForm({ name: '', description: '', price: '', quantity: '' }); }} style={{ marginLeft: 8 }}>Annuler</button>}
+                                <OrdersTable
+                                    orders={orders}
+                                    loading={loadingOrders}
+                                    hasRole={hasRole}
+                                    onEdit={editOrder}
+                                    onDelete={handleDeleteOrder}
+                                    products={products}
+                                />
+
+                                {/* Hidden dialog for editing orders (opens when editOrder is called) */}
+                                {editingOrderId && (
+                                    <OrderFormDialog
+                                        newOrder={newOrder}
+                                        editingOrderId={editingOrderId}
+                                        products={products}
+                                        selectedProduct={selectedProduct}
+                                        onSubmit={handleCreateOrder}
+                                        onProductSelect={handleProductSelection}
+                                        onQuantityChange={handleQuantityChange}
+                                        onCancel={cancelOrderEdit}
+                                        trigger={<div style={{ display: 'none' }} />}
+                                    />
+                                )}
                             </div>
-                        </form>
-                    </>
-                )}
+                        </TabsContent>
+                    )}
+                </Tabs>
             </div>
-
-            <div className="section" style={{ marginTop: 20 }}>
-                <h3>Commandes</h3>
-                {loadingOrders ? <div>Chargement...</div> : (
-                    <table className="data-table" border={1} cellPadding={8} style={{ borderCollapse: 'collapse' }}>
-                        <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Produit</th>
-                            <th>Quantité</th>
-                            <th>Prix Total</th>
-                            {hasRole('ADMIN') && <th>Utilisateur</th>}
-                            <th>Date</th>
-                            {hasRole('ADMIN') && <th>Actions</th>}
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {Array.isArray(orders) && orders.length > 0 ? orders.map(o => (
-                            <tr key={o.id}>
-                                <td>{o.id}</td>
-                                <td>{o.productName}</td>
-                                <td>{o.quantity}</td>
-                                <td>{o.price}</td>
-                                {hasRole('ADMIN') && <td>{o.username}</td>}
-                                <td>{o.createdAt || '-'}</td>
-                                <td>
-                                    {hasRole('ADMIN') ? (
-                                        <>
-                                            <button className="btn-primary" onClick={() => editOrder(o)}>Edit</button>
-                                            <button className="btn-danger" onClick={() => handleDeleteOrder(o.id)} style={{ marginLeft: 8 }}>Delete</button>
-                                        </>
-                                    ) : '-'}
-                                </td>
-                            </tr>
-                        )) : <tr><td colSpan={hasRole('ADMIN') ? 7 : 5}>Aucune commande</td></tr>}
-                        </tbody>
-                    </table>
-                )}
-
-                {hasRole('CLIENT') && (
-                    <>
-                        <h4 style={{ marginTop: 20 }}>{editingOrderId ? 'Modifier commande' : 'Créer commande'}</h4>
-                        <form onSubmit={handleCreateOrder} className="form" style={{ display: 'grid', gap: 8, maxWidth: 500 }}>
-                            <input className="input" placeholder="Produit" value={newOrder.productName} onChange={e => setNewOrder({...newOrder, productName: e.target.value})} required />
-                            <input className="input" placeholder="Quantité" type="number" value={newOrder.quantity} onChange={e => setNewOrder({...newOrder, quantity: e.target.value})} required />
-                            <input className="input" placeholder="Prix Total" value={newOrder.totalPrice} onChange={e => setNewOrder({...newOrder, totalPrice: e.target.value})} required />
-                            <div>
-                                <button type="submit" className="btn-primary">{editingOrderId ? 'Enregistrer' : 'Créer'}</button>
-                                {editingOrderId && <button type="button" onClick={() => { setEditingOrderId(null); setNewOrder({ productName: '', quantity: '', totalPrice: '' }); }} className="btn-primary" style={{ marginLeft: 8 }}>Annuler</button>}
-                            </div>
-                        </form>
-                    </>
-                )}
-            </div>
-
-            <br />
-            <button onClick={() => keycloak.logout()}>
-                Se déconnecter
-            </button>
         </div>
     );
 }
 
 export default App;
+
