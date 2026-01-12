@@ -206,4 +206,97 @@ Pour plus d'informations, consultez le [guide de configuration complet](SECURITY
 
 ---
 
+## Documentation technique (conforme au cahier des charges)
+
+Objectif
+- Concevoir une application web moderne en architecture micro-services sécurisée pour la gestion des produits et commandes. L'implémentation fournie suit les standards : OAuth2/OpenID Connect, Gateway centralisée, conteneurisation et pipelines DevSecOps.
+
+Architecture générale (état)
+- Frontend : React (SPA) — implémenté.
+- API Gateway : Spring Cloud Gateway (point d'entrée unique, validation JWT, routage) — implémenté.
+- Micro-services : Product (port 8081) et Order (port 8082) — Spring Boot indépendants — implémentés.
+- Auth : Keycloak (realm `ecom`) — fourni via docker-compose / ecom-realm.json — implémenté.
+- Bases de données : bases séparées (en dev : H2 en mémoire). Chaque micro-service gère sa propre BDD — implémenté.
+
+Architecture visuelle
+![Architecture du projet (espace de travail local)](./screens/architecture_du_projet_dans_espace_de_travail_local.png)
+![Architecture globale](./screens/architecture_global.png)
+
+1) Frontend Web (React)
+- Authentification : Keycloak (OAuth2 / OIDC) avec PKCE pour le client public `ecom-frontend`.
+- Session : gestion via tokens JWT fournis par Keycloak (utilisés pour les appels API vers la Gateway).
+- Fonctionnalités : affichage catalogue, création/consultation de commandes, interface adaptée selon rôle (ADMIN / CLIENT).
+- Communication : toutes les requêtes passent par l'API Gateway (pas d'accès direct aux micro-services).
+- Gestion d'erreurs : 401/403 gérés côté client (redirection / message).
+
+2) Micro-service Produit (Product service)
+- Endpoints CRUD :
+  - POST /products (ADMIN)
+  - PUT /products/{id} (ADMIN)
+  - DELETE /products/{id} (ADMIN)
+  - GET /products (ADMIN, CLIENT)
+  - GET /products/{id} (ADMIN, CLIENT)
+- Modèle produit : id, name, description, price, quantity.
+- Persistance : H2 en mémoire (dev); Dockerfile et config prêts pour PostgreSQL si souhaité.
+
+3) Micro-service Commande (Order service)
+- Endpoints :
+  - POST /orders (CLIENT) — création de commande (vérification stock).
+  - GET /orders (ADMIN) — lister toutes les commandes.
+  - GET /orders/my (CLIENT) — consulter ses commandes.
+- Logique : calcul automatique du montant total, vérification disponibilité via appel REST vers Product service.
+- Format ligne commande : { idProduit, quantité, prix }.
+
+4) Communication inter-services
+- Appels REST entre Order -> Product pour vérification stock et récupération prix.
+- Propagation du token JWT lors des appels inter-services (Gateway / services configurés pour forward).
+- Gestion des erreurs métiers (produit inexistant, stock insuffisant) renvoyées avec codes HTTP appropriés.
+
+5) Sécurité (Keycloak)
+- Keycloak assure authentification et autorisation.
+- Tokens JWT validés au niveau du Gateway et au niveau des micro-services.
+- Rôles utilisés : ADMIN, CLIENT.
+- Configuration : realm `ecom`, clients `ecom-frontend` (public) et `ecom-backend` (confidential).
+
+6) API Gateway
+- Point d'entrée unique pour le frontend (routes /products/**, /orders/**).
+- Validation JWT centralisée, routage, et règles d'autorisation. Aucune logique métier dans la gateway.
+
+7) Gestion des données
+- Une BDD par micro-service (principe micro-services respecté).
+- En dev, H2 en mémoire ; Docker Compose prévu pour base persistante (Postgres) si activée.
+
+8) Conteneurisation
+- Dockerfile présent pour chaque composant (frontend, gateway, product-service, order-service).
+- docker-compose.yml fourni pour démarrer Keycloak, bases, et services.
+
+9) DevSecOps
+- Intégration d'outils SAST/DAST : CodeQL, Semgrep, ESLint, OWASP Dependency-Check, Trivy.
+- Workflows GitHub Actions pré-configurés pour analyses automatiques.
+
+10) Journalisation et traçabilité
+- Logs d'accès et d'erreurs présents dans les services (Spring Boot logging).
+- Identification utilisateur (ID/rôle) ajoutable aux logs via extraction du token (implémentation de base fournie).
+
+Diagrams & captures
+- Diagramme de séquence du processus de commande :
+  ![Diagramme de séquence commande](./screens/diagram_sequence_commande.png)
+
+- Capture: client avec rôle ADMIN et POST/EDIT via Gateway :
+  ![Client ADMIN - POST/EDIT via Gateway](./screens/client_avec_role_admin_authenficated_et_POST_EDDIT_bien_effectuee_via_gateway.png)
+
+Livrables fournis
+- Code source complet versionné (modules : gateway, product-service, order-service, react-app).
+- docker-compose.yml (Keycloak + DBs + import realm).
+- ecom-realm.json (export du realm pour import manuel).
+- Diagrams/images (dans /screens).
+- Documentation technique (ce README).
+- Workflows DevSecOps intégrés (GitHub Actions).
+
+État d'avancement (résumé)
+- Fonctionnalités principales (auth, gateway, CRUD produits, création commandes, vérif. stock) : implémentées.
+- Conteneurisation et docker-compose : fournis et testés localement.
+- Analyses de sécurité : workflows en place (vérifier tokens et secrets avant push public).
+- Extensions possibles (bonus) : déploiement Kubernetes, mTLS, circuit breaker, tests automatisés, monitoring avancé.
+
 Si vous voulez, j'ajoute un petit script `scripts/start-all.sh` pour lancer tous les modules en parallèle en mode dev, ou j'ajoute `ecom-realm.json` dans un dossier `keycloak/` du repo (en masquant les secrets). Dites‑moi ce que vous préférez.
