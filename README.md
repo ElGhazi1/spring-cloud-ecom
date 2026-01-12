@@ -1,11 +1,87 @@
 # Projet microservices - Keycloak demo 🚀
 
-Ce dépôt contient un mini-projet micro-services (React + Spring Boot + Keycloak) destiné à l'apprentissage et au TP.
-Le projet inclut :
-- Frontend React (SPA) authentifié via Keycloak
-- API Gateway (Spring Cloud Gateway) validant les JWT
-- Micro-services Product et Order (Spring Boot, JWT-protected)
-- Base en mémoire H2 pour développement
+Petite introduction
+- Ce mini‑projet illustre une application web en architecture micro‑services (React + Spring Boot) sécurisée par Keycloak. L'accent est mis sur la sécurité (OAuth2/OIDC, JWT), la modularité et la conteneurisation.
+
+Sommaire
+- [Diagrams](#diagrams)
+- [Lancement (Docker Compose)](#lancement-docker-compose)
+- [Fonctionnalités implémentées](#fonctionnalites-implmentees)
+- [Architecture & composants](#architecture--composants)
+- [Tests rapides](#tests-rapides)
+- [DevSecOps & logs](#devsecops--logs)
+- [Conclusion](#conclusion)
+
+## Diagrams
+- Architecture globale  
+  ![Architecture globale](./screens/architecture_global.png)
+
+- Architecture du projet (espace de travail local)  
+  ![Architecture locale](./screens/architecture_du_projet_dans_espace_de_travail_local.png)
+
+- Diagramme de séquence du processus de commande  
+  ![Diagramme de séquence commande](./screens/diagram_sequence_commande.png)
+
+- Exemple : client ADMIN authentifié et POST/EDIT via Gateway  
+  ![Client ADMIN - POST/EDIT via Gateway](./screens/client_avec_role_admin_authenficated_et_POST_EDDIT_bien_effectuee_via_gateway.png)
+
+## Lancement (Docker Compose)
+Priorité : utiliser la conteneurisation. Le repo contient un `docker-compose.yml` pour démarrer Keycloak (avec Postgres) et importer le realm `ecom`. Si vous voulez démarrer l'ensemble des services via Docker Compose (si les services sont configurés dans le compose) :
+```bash
+# démarrer les services et construire les images si nécessaire
+docker-compose up -d --build
+
+# suivre les logs (ex : Gateway)
+docker-compose logs -f gateway
+```
+
+Notes pratiques
+- Le compose fourni importe le realm `ecom` automatiquement (fichier `ecom-realm.json`) pour Keycloak.
+- Si le docker-compose ne contient que Keycloak/DB, démarrer d'abord Keycloak via compose, puis démarrer les modules (si exécutés localement) :
+  - Start Keycloak : `docker-compose up -d`
+  - Ensuite lancer les services (dev) si vous préférez en local :
+    - Gateway : cd gateway && ./mvnw spring-boot:run
+    - Product service : cd product-service && ./mvnw spring-boot:run
+    - Order service : cd order-service && ./mvnw spring-boot:run
+  (le mode recommandé reste : conteneuriser et ajouter les services au docker-compose)
+
+## Fonctionnalités implémentées
+- Frontend React (SPA) authentifié via Keycloak (PKCE pour client public).
+- API Gateway (Spring Cloud Gateway) : point d'entrée unique, validation JWT, routage (/products/**, /orders/**).
+- Micro-services :
+  - Product service (CRUD produits) — endpoints protégés par rôles (ADMIN/CLIENT).
+  - Order service (création commandes, vérif. stock, calcul montants).
+- Sécurité : Keycloak (realm `ecom`), JWT validés au niveau Gateway et services, rôles ADMIN/CLIENT.
+- Bases : en dev, H2 en mémoire par service ; docker-compose prévu pour BDD persistantes (Postgres).
+- Conteneurisation : Dockerfile prévus ; docker-compose pour démarrage centralisé.
+- DevSecOps : workflows (CodeQL, Semgrep, ESLint, OWASP Dependency-Check, Trivy) inclus.
+
+## Architecture & composants
+- Frontend : react-app (communique uniquement via Gateway).
+- Gateway : spring cloud gateway (port par défaut du repo : 8085).
+- Product service : spring-boot (port 8081).
+- Order service : spring-boot (port 8082).
+- Auth : Keycloak (http://127.0.0.1:8080, realm `ecom`).
+
+## Tests rapides
+- Obtenir un token via le frontend (ou via Keycloak REST) puis :
+```bash
+# lister produits via Gateway
+curl -H "Authorization: Bearer <ACCESS_TOKEN>" http://127.0.0.1:8085/products
+
+# créer produit (ADMIN)
+curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -d '{"name":"Nom","description":"Desc","price":12.5,"quantity":10}' \
+  http://127.0.0.1:8085/products
+```
+
+## DevSecOps & logs
+- Scans automatisés configurés dans les workflows GitHub Actions (CodeQL, Semgrep, Trivy, Dependency-Check).
+- Logs applicatifs via Spring Boot : inclure identification utilisateur (extraction du token) pour traçabilité.
+
+## Conclusion
+- L'implémentation fournie couvre les points essentiels du cahier des charges : front sécurisé, gateway centralisée, micro-services séparés, conteneurisation et pipelines DevSecOps.
+- Propositions d'extensions : déploiement Kubernetes, mTLS, circuit breaker, tests automatisés, monitoring avancé.
 
 ---
 
