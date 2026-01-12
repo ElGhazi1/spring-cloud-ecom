@@ -299,4 +299,3 @@ Livrables fournis
 - Analyses de sécurité : workflows en place (vérifier tokens et secrets avant push public).
 - Extensions possibles (bonus) : déploiement Kubernetes, mTLS, circuit breaker, tests automatisés, monitoring avancé.
 
-Si vous voulez, j'ajoute un petit script `scripts/start-all.sh` pour lancer tous les modules en parallèle en mode dev, ou j'ajoute `ecom-realm.json` dans un dossier `keycloak/` du repo (en masquant les secrets). Dites‑moi ce que vous préférez.
