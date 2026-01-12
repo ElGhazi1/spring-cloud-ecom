@@ -1,7 +1,7 @@
 package ma.enset.orderservice.dtos;
 
 import lombok.Builder;
-import ma.enset.orderservice.OrderStatus;
+import ma.enset.orderservice.enums.OrderStatus;
 
 import java.time.LocalDateTime;
 

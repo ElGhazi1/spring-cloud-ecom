@@ -1,7 +1,7 @@
 package ma.enset.orderservice.service;
 
 import lombok.AllArgsConstructor;
-import ma.enset.orderservice.OrderStatus;
+import ma.enset.orderservice.enums.OrderStatus;
 import ma.enset.orderservice.dtos.CreateOrderRequestDTO;
 import ma.enset.orderservice.dtos.OrderResponseDTO;
 import ma.enset.orderservice.dtos.UpdateOrderRequestDTO;
