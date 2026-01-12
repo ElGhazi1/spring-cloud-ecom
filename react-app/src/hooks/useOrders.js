@@ -84,9 +84,6 @@ export const useOrders = (keycloak, apiBase, products, hasRole) => {
         try {
             await keycloak.updateToken(30);
 
-            // Get clientId from keycloak token
-            const clientId = keycloak.tokenParsed?.preferred_username || keycloak.tokenParsed?.sub;
-
             if (editingOrderId) {
                 // For update, send quantity and status (UpdateOrderRequestDTO)
                 const updatePayload = {
@@ -100,9 +97,8 @@ export const useOrders = (keycloak, apiBase, products, hasRole) => {
                 alert.success('Success', 'Order updated successfully!');
                 setEditingOrderId(null);
             } else {
-                // For create, send CreateOrderRequestDTO
+                // For create, send CreateOrderRequestDTO (clientId extracted from JWT by backend)
                 const createPayload = {
-                    clientId: clientId,
                     productId: newOrder.productId,
                     quantity: parseInt(newOrder.quantity, 10)
                 };
