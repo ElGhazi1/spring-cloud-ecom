@@ -187,6 +187,26 @@ Le realm `ecom` est importé automatiquement au démarrage depuis `ecom-realm.js
 - Order DB: `order-db-data` volume
 - Product DB: `product-db-data` volume
 
+### Captures d'écran - Authentification & Autorisation
+
+#### Architecture et flux complet
+
+![Architecture du projet](./screens/architecture_du_projet_dans_espace_de_travail_local.png)
+
+#### Client authentifié avec rôle ADMIN
+
+![Client avec rôle ADMIN authentifié](./screens/client_avec_role_admin_authenficated_et_POST_EDDIT_bien_effectuee_via_gateway.png)
+
+#### Opérations CRUD sécurisées via Gateway
+
+![POST/EDIT produit depuis frontend - Admin authentifié](./screens/we_can_post_eddit_product_from_gateway_from_front_client_admin_role_authenticated.png)
+
+![Succès de modification produit - Alerte confirmée](./screens/we_can_post_eddit_product_from_gateway_from_front_client_admin_role_authenticated_success_alerted.png)
+
+#### Autorisation correcte au niveau Service
+
+![Ajout commande par admin autorisé](./screens/add_new_order_by_admin_authorized_success.png)
+
 ---
 
 ## Tests rapides (curl)
@@ -229,6 +249,8 @@ curl -H "Authorization: Bearer $(cat TOKEN.txt)" \
 
 ## Analyse de sécurité (DevSecOps)
 
+### Outils et workflows GitHub Actions
+
 Workflows GitHub Actions inclus:
 
 - **CodeQL**: Détection vulnérabilités Java/JavaScript (SAST)
@@ -238,6 +260,14 @@ Workflows GitHub Actions inclus:
 - **Trivy**: Vulnérabilités images Docker
 
 Résultats: GitHub Security Tab (onglet "Security")
+
+### Sécurité activée dans le repo
+
+![Outils de sécurité activés](./screens/list_des_security_outils_activee_sur_repo.png)
+
+![Code Scanning activé](./screens/code_scanning_bien_active.png)
+
+![Dependabot alertes activé](./screens/alerting_dependabot_bien_active.png)
 
 ---
 
